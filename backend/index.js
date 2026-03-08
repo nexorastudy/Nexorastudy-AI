@@ -1,23 +1,26 @@
-const express = require("express");
-const app = express();
+const express = require("express")
+const cors = require("cors")
 
-app.use(express.json());
+const app = express()
+
+app.use(cors())
+app.use(express.json())
 
 app.get("/", (req, res) => {
-  res.send("NexoraStudy server running");
-});
+  res.send("NexoraStudy Backend Running 🚀")
+})
 
-app.post("/ask", (req, res) => {
-  const question = req.body.question;
+app.get("/ask", (req, res) => {
+  const question = req.query.q
 
-  if (!question) {
-    return res.json({ answer: "Please ask a question." });
-  }
+  res.json({
+    question: question,
+    answer: "This is a demo AI answer. Real AI will be added later."
+  })
+})
 
-  const answer = "Answer for: " + question;
-  res.json({ answer });
-});
+const PORT = 3000
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT)
 });
