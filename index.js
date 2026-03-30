@@ -29,3 +29,13 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server started on port " + PORT);
 });
+app.get("/ask", async (req, res) => {
+  const question = req.query.question;
+
+  if (!question) {
+    return res.send("No question provided");
+  }
+
+  // अभी simple test response
+  res.send("Answer: " + question);
+});
