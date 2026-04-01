@@ -20,18 +20,26 @@ app.get("/ask", async (req, res) => {
       {
         method: "POST",
         headers: {
-          "Authorization": "Bearer " + process.env.HF_API_KEY,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inputs: "Explain in simple words: " + question
+          inputs: question,
         }),
       }
     );
 
     const data = await response.json();
 
-    let answer = data[0]?.generated_text || "No answer";
+    let answer = "";
+
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      answer = data[0].generated_text;
+    } else if (data.error) {
+      answer = "Model loading... try again in few seconds";
+    } else {
+      answer = JSON.stringify(data);
+    }
 
     res.send(answer);
 
@@ -41,7 +49,6 @@ app.get("/ask", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log("Server started on port " + PORT);
 });
