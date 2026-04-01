@@ -21,7 +21,7 @@ app.get("/ask", async (req, res) => {
   try {
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: question }],
-      model: "llama3-8b-8192",
+      model: "llama-3.1-8b-instant",
     });
 
     const answer = chatCompletion.choices[0].message.content;
