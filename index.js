@@ -1,10 +1,14 @@
 const express = require("express");
-const fetch = require("node-fetch");
+const Groq = require("groq-sdk");
 
 const app = express();
 
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
 app.get("/", (req, res) => {
-  res.send("NexoraStudy Server Running 🚀");
+  res.send("NexoraStudy AI Running 🚀");
 });
 
 app.get("/ask", async (req, res) => {
@@ -15,31 +19,14 @@ app.get("/ask", async (req, res) => {
   }
 
   try {
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/google/flan-t5-base",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.HF_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: question,
-        }),
-      }
-    );
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: "user", content: question }
+      ],
+      model: "llama3-8b-8192",
+    });
 
-    const data = await response.json();
-
-    let answer = "";
-
-    if (Array.isArray(data) && data[0]?.generated_text) {
-      answer = data[0].generated_text;
-    } else if (data.error) {
-      answer = "Model loading... try again in few seconds";
-    } else {
-      answer = JSON.stringify(data);
-    }
+    const answer = chatCompletion.choices[0].message.content;
 
     res.send(answer);
 
@@ -50,5 +37,5 @@ app.get("/ask", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log("Server started");
 });
