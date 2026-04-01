@@ -20,9 +20,7 @@ app.get("/ask", async (req, res) => {
 
   try {
     const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: "user", content: question }
-      ],
+      messages: [{ role: "user", content: question }],
       model: "llama3-8b-8192",
     });
 
@@ -37,5 +35,5 @@ app.get("/ask", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server started");
+  console.log("Server started on port " + PORT);
 });
