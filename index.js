@@ -3,19 +3,21 @@ const Groq = require("groq-sdk");
 
 const app = express();
 
-// 👉 Groq setup
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// 👉 Home route
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
-// 👉 AI route
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
+  const key = req.query.key;
+
+  if (key !== "nexora123") {
+    return res.send("Unauthorized ❌");
+  }
 
   if (!question) {
     return res.send("No question provided");
@@ -24,9 +26,9 @@ app.get("/ask", async (req, res) => {
   try {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { role: "user", content: "Explain in simple words: " + question }
+        { role: "user", content: "Answer shortly in simple Hindi and English: " + question }
       ],
-      model: "llama-3.1-8b-instant", // ✅ latest working model
+      model: "llama-3.1-8b-instant",
     });
 
     const answer = chatCompletion.choices[0]?.message?.content || "No answer";
@@ -38,7 +40,6 @@ app.get("/ask", async (req, res) => {
   }
 });
 
-// 👉 Port
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
