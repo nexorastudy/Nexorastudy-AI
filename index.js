@@ -1,50 +1,53 @@
 const express = require("express");
 const Groq = require("groq-sdk");
+const cors = require("cors");
 
 const app = express();
+app.use(cors());
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-let lastRequestTime = 0;
+// user rate limit (safe + simple)
+const users = {};
 
-// Home route
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
-// Ask route
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
-
-  // ⛔ Rate limit (2 sec)
-  const now = Date.now();
-  if (now - lastRequestTime < 2000) {
-    return res.send("Too many requests ❌");
-  }
-  lastRequestTime = now;
+  const userIP = req.ip;
 
   if (!question) {
     return res.send("No question provided");
   }
 
+  // ⛔ 2 sec limit per user (API बचाने के लिए)
+  const now = Date.now();
+  if (users[userIP] && now - users[userIP] < 2000) {
+    return res.send("Please wait 2 seconds ⏳");
+  }
+
+  users[userIP] = now;
+
   try {
-    const chatCompletion = await groq.chat.completions.create({
+    const response = await groq.chat.completions.create({
       messages: [
         {
           role: "user",
-          content: "Answer in very simple words (Hindi + English mix, clean and clear): " + question
-        }
+          content:
+            "Answer shortly in simple Hindi and English: " + question,
+        },
       ],
       model: "llama-3.1-8b-instant",
     });
 
     const answer =
-      chatCompletion.choices[0]?.message?.content || "No answer";
+      response.choices[0]?.message?.content || "No answer";
 
     res.send(answer);
-
   } catch (err) {
     res.send("Error: " + err.message);
   }
@@ -53,5 +56,5 @@ app.get("/ask", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log("Server running on port " + PORT);
 });
