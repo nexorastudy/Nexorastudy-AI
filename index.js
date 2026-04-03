@@ -7,6 +7,8 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+let lastRequestTime = 0;
+
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
@@ -15,9 +17,17 @@ app.get("/ask", async (req, res) => {
   const question = req.query.question;
   const key = req.query.key;
 
+  // 🔐 Security key
   if (key !== "nexora123") {
     return res.send("Unauthorized ❌");
   }
+
+  // ⛔ Rate limit
+  const now = Date.now();
+  if (now - lastRequestTime < 2000) {
+    return res.send("Too many requests ❌");
+  }
+  lastRequestTime = now;
 
   if (!question) {
     return res.send("No question provided");
@@ -26,13 +36,12 @@ app.get("/ask", async (req, res) => {
   try {
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { role: "user", content: "Answer shortly in simple Hindi and English: " + question }
+        { role: "user", content: "Answer shortly in simple Hindi and English: " + question },
       ],
       model: "llama-3.1-8b-instant",
     });
 
     const answer = chatCompletion.choices[0]?.message?.content || "No answer";
-
     res.send(answer);
 
   } catch (err) {
@@ -41,7 +50,6 @@ app.get("/ask", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log("Server started on port " + PORT);
 });
