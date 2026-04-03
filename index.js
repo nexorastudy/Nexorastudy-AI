@@ -7,6 +7,10 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+// 🔐 Hidden App Key
+const APP_KEY = "mushkan_app_2026";
+
+// ⛔ Rate limit
 let lastRequestTime = 0;
 
 app.get("/", (req, res) => {
@@ -15,14 +19,14 @@ app.get("/", (req, res) => {
 
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
-  const key = req.query.key;
+  const appKey = req.query.appkey;
 
-  // 🔐 Security key
-  if (key !== "nexora123") {
-    return res.send("Unauthorized ❌");
+  // 🔐 Allow only app
+  if (appKey !== APP_KEY) {
+    return res.send("Access Denied ❌ (Use App)");
   }
 
-  // ⛔ Rate limit (2 sec gap)
+  // ⛔ Rate limit
   const now = Date.now();
   if (now - lastRequestTime < 2000) {
     return res.send("Too many requests ❌");
@@ -38,16 +42,18 @@ app.get("/ask", async (req, res) => {
       messages: [
         {
           role: "user",
-          content: "Answer in very simple words, clean and clear (Hindi + English mix, no headings): " + question
-        }
+          content:
+            "Answer in simple Hindi + English mix, clean and clear: " +
+            question,
+        },
       ],
       model: "llama-3.1-8b-instant",
     });
 
-    const answer = chatCompletion.choices[0]?.message?.content || "No answer";
+    const answer =
+      chatCompletion.choices[0]?.message?.content || "No answer";
 
     res.send(answer);
-
   } catch (err) {
     res.send("Error: " + err.message);
   }
