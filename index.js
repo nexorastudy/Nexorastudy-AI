@@ -1,15 +1,20 @@
 const express = require("express");
-const fetch = require("node-fetch");
-require("dotenv").config();
+const Groq = require("groq-sdk");
 
 const app = express();
 
-// Test route
-app.get("/", (req, res) => {
-  res.send("NexoraStudy Server Running 🚀");
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
-// Main AI route
+// Home check
+app.get("/", (req, res) => {
+  res.send("NexoraStudy AI Running 🚀");
+});
+
+// Simple memory for rate limit (per IP)
+let userRequests = {};
+
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
@@ -17,57 +22,38 @@ app.get("/ask", async (req, res) => {
     return res.send("No question provided");
   }
 
-  // 🔥 SMART PROMPT LOGIC
-  let prompt = "";
+  const userIP = req.ip;
 
-  if (
-    question.toLowerCase().includes("developer") ||
-    question.toLowerCase().includes("founder") ||
-    question.toLowerCase().includes("creator") ||
-    question.toLowerCase().includes("kisne banaya") ||
-    question.toLowerCase().includes("kaun banaya")
-  ) {
-    prompt = "NexoraStudy AI is created by Ajay Chaudhary.";
-  } else {
-    prompt =
-      "Answer shortly in simple Hindi and English:\n" + question;
+  // limit: 1 request per 2 seconds per user
+  if (userRequests[userIP] && Date.now() - userRequests[userIP] < 2000) {
+    return res.send("Wait 2 sec ⏳");
   }
 
+  userRequests[userIP] = Date.now();
+
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "llama3-8b-8192",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      })
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content:
+            "Explain shortly in simple Hindi and English: " + question,
+        },
+      ],
+      model: "llama-3.1-8b-instant",
     });
 
-    const data = await response.json();
-
-    if (data.error) {
-      return res.send("Error: " + data.error.message);
-    }
-
-    const answer = data.choices[0].message.content;
+    const answer =
+      chatCompletion.choices[0]?.message?.content || "No answer";
 
     res.send(answer);
-
-  } catch (error) {
-    res.send("Server error");
+  } catch (err) {
+    res.send("Error: " + err.message);
   }
 });
 
-// Port
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("Server started on port " + PORT);
 });
