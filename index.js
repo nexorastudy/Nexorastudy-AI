@@ -1,102 +1,104 @@
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const Groq = require("groq-sdk");
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
-// 🔑 Groq setup
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  next();
+});
+
+// Rate limit
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 40,
+});
+app.use(limiter);
+
+// Groq setup
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// ⚡ Cache system
-let cache = {};
-const CACHE_LIMIT = 100;
+// Cache
+let cache = new Map();
+const CACHE_LIMIT = 300;
 
-// 👥 User tracking + rate limit
-let userRequests = {};
+// User tracker
+let userTracker = new Map();
 
-// 🧠 Main route
-app.get("/ask", async (req, res) => {
+// MAIN API
+app.post("/ask", async (req, res) => {
   try {
-    const question = req.query.question;
-    const userIP = req.ip;
+    const question = req.body.question;
+    const ip = req.ip;
 
-    console.log("User:", userIP, "| Question:", question);
-
-    // ❌ Input validation
     if (!question || question.trim() === "") {
-      return res.send("❌ Please enter a valid question");
+      return res.json({ error: "Invalid question" });
     }
 
     if (question.length > 200) {
-      return res.send("❌ Question too long (max 200 characters)");
+      return res.json({ error: "Too long" });
     }
 
-    // ⏳ Simple rate limit (2 sec)
-    if (userRequests[userIP] && Date.now() - userRequests[userIP] < 2000) {
-      return res.send("⏳ Wait 2 sec and try again");
+    const last = userTracker.get(ip) || 0;
+    if (Date.now() - last < 1200) {
+      return res.json({ error: "Slow down" });
     }
-    userRequests[userIP] = Date.now();
+    userTracker.set(ip, Date.now());
 
-    // ⚡ Cache check
-    if (cache[question]) {
-      return res.send("⚡ (Fast Answer)\n\n" + cache[question]);
+    if (cache.has(question)) {
+      return res.json({ answer: cache.get(question) });
     }
 
-    // 🤖 AI call (FAST MODEL)
-    const chatCompletion = await groq.chat.completions.create({
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout")), 5000)
+    );
+
+    const aiCall = groq.chat.completions.create({
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful teacher. Answer very short (3-4 lines). First English, then Hindi. Simple language.",
+            "Answer short (3-4 lines). English then Hindi.",
         },
-        {
-          role: "user",
-          content: question,
-        },
+        { role: "user", content: question },
       ],
       model: "llama-3.1-8b-instant",
-      max_tokens: 120,
-      temperature: 0.5,
     });
+
+    let response;
+    try {
+      response = await Promise.race([aiCall, timeout]);
+    } catch {
+      return res.json({ error: "Server busy" });
+    }
 
     const answer =
       "✨ Great question!\n\n" +
-      (chatCompletion.choices[0]?.message?.content || "No answer");
+      (response.choices?.[0]?.message?.content || "No answer");
 
-    // 💾 Save cache
-    cache[question] = answer;
+    cache.set(question, answer);
 
-    // 🔁 Cache limit control
-    if (Object.keys(cache).length > CACHE_LIMIT) {
-      cache = {};
+    if (cache.size > CACHE_LIMIT) {
+      const firstKey = cache.keys().next().value;
+      cache.delete(firstKey);
     }
 
-    res.send(answer);
-  } catch (err) {
-    console.error("Error:", err);
-
-    res.send("⚠️ Server busy or slow, please try again");
+    res.json({ answer });
+  } catch {
+    res.json({ error: "Error occurred" });
   }
 });
 
-// 🏠 Home check
-app.get("/", (req, res) => {
-  res.send("🚀 NexoraStudy AI Running");
-});
-
-// 📊 Stats route
-app.get("/stats", (req, res) => {
-  res.json({
-    totalUsers: Object.keys(userRequests).length,
-  });
-});
-
-// 🚀 Server start
+// Start
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log("Server running");
 });
