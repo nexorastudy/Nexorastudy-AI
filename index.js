@@ -4,67 +4,52 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-// Root route
+// Home route
 app.get("/", (req, res) => {
   res.send("NexoraStudy Server Running 🚀");
 });
 
 // Ask route
-app.get("/ask", async (req, res) => {
+app.get("/ask", (req, res) => {
   const question = req.query.question;
 
   if (!question) {
     return res.send("No question provided");
   }
 
-  let prompt = "";
+  let answer = "";
 
-  // Developer / Founder logic
+  const q = question.toLowerCase();
+
+  // Developer / Founder
   if (
-    question.toLowerCase().includes("developer") ||
-    question.toLowerCase().includes("founder") ||
-    question.toLowerCase().includes("creator") ||
-    question.toLowerCase().includes("kisne banaya") ||
-    question.toLowerCase().includes("kaun banaya")
+    q.includes("developer") ||
+    q.includes("founder") ||
+    q.includes("creator") ||
+    q.includes("kisne banaya") ||
+    q.includes("kaun banaya")
   ) {
-    prompt = "NexoraStudy AI is created by Ajay Chaudhary.";
-  } else {
-    prompt =
-      "Answer shortly in simple Hindi and English:\n" + question;
+    answer = "NexoraStudy AI is created by Ajay Chaudhary.";
   }
 
-  try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "llama3-8b-8192",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.error) {
-      return res.send("API Error: " + data.error.message);
-    }
-
-    const answer = data.choices[0].message.content;
-
-    res.send(answer);
-
-  } catch (error) {
-    console.error(error);
-    res.send("Server error ❌: " + error.message);
+  // Simple AI answers
+  else if (q.includes("hi") || q.includes("hello")) {
+    answer = "Hello 👋\n\nKaise ho?\nHow can I help you?";
   }
+
+  else if (q.includes("what is ai")) {
+    answer =
+      "AI (Artificial Intelligence) ek technology hai jo machines ko insan ki tarah sochne aur decision lene me help karti hai.\n\nAI is a technology that allows machines to think and act like humans.";
+  }
+
+  else {
+    answer =
+      "Sorry 😅\n\nAbhi simple version hai.\nTumne poocha: " +
+      question +
+      "\n\nIska advanced answer future update me milega 🚀";
+  }
+
+  res.send(answer);
 });
 
 // Port
