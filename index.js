@@ -25,7 +25,7 @@ app.get("/ask", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",   // ✅ UPDATED MODEL
         messages: [
           {
             role: "system",
@@ -41,12 +41,12 @@ app.get("/ask", async (req, res) => {
 
     const data = await response.json();
 
-    // 🔥 Error handling (important)
+    // Proper error handling
     if (!response.ok) {
-      return res.send("API Error ❌: " + JSON.stringify(data));
+      return res.send("API Error ❌: " + (data.error?.message || "Unknown error"));
     }
 
-    const answer = data.choices?.[0]?.message?.content || "No answer";
+    const answer = data.choices?.[0]?.message?.content || "No answer found";
     res.send(answer);
 
   } catch (error) {
