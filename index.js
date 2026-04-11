@@ -1,20 +1,21 @@
 const express = require("express");
+const cors = require("cors");
 const Groq = require("groq-sdk");
 
 const app = express();
+app.use(cors());
 
+// Groq API setup
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// Home check
+// 🔥 ROOT ROUTE (IMPORTANT - Not Found fix)
 app.get("/", (req, res) => {
-  res.send("NexoraStudy AI Running 🚀");
+  res.send("NexoraStudy Server Running 🚀");
 });
 
-// Simple memory for rate limit (per IP)
-let userRequests = {};
-
+// 🔥 AI ROUTE
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
@@ -22,38 +23,44 @@ app.get("/ask", async (req, res) => {
     return res.send("No question provided");
   }
 
-  const userIP = req.ip;
+  let prompt = "";
 
-  // limit: 1 request per 2 seconds per user
-  if (userRequests[userIP] && Date.now() - userRequests[userIP] < 2000) {
-    return res.send("Wait 2 sec ⏳");
+  // 👇 Developer / Founder logic
+  if (
+    question.toLowerCase().includes("developer") ||
+    question.toLowerCase().includes("founder") ||
+    question.toLowerCase().includes("creator") ||
+    question.toLowerCase().includes("kisne banaya") ||
+    question.toLowerCase().includes("kaun banaya")
+  ) {
+    prompt = "NexoraStudy AI is created by Ajay Chaudhary.";
+  } else {
+    prompt =
+      "Answer shortly in simple Hindi and English:\n" + question;
   }
 
-  userRequests[userIP] = Date.now();
-
   try {
-    const chatCompletion = await groq.chat.completions.create({
+    const response = await groq.chat.completions.create({
+      model: "llama3-8b-8192",
       messages: [
         {
           role: "user",
-          content:
-            "Explain shortly in simple Hindi and English: " + question,
+          content: prompt,
         },
       ],
-      model: "llama-3.1-8b-instant",
     });
 
-    const answer =
-      chatCompletion.choices[0]?.message?.content || "No answer";
+    const answer = response.choices[0].message.content;
 
     res.send(answer);
-  } catch (err) {
-    res.send("Error: " + err.message);
+  } catch (error) {
+    console.error(error);
+    res.send("Server error ❌");
   }
 });
 
+// 🔥 PORT (IMPORTANT)
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log("Server running on port " + PORT);
 });
