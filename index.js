@@ -1,21 +1,15 @@
 const express = require("express");
 const cors = require("cors");
-const Groq = require("groq-sdk");
 
 const app = express();
 app.use(cors());
 
-// Groq API setup
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
-// 🔥 ROOT ROUTE (IMPORTANT - Not Found fix)
+// Root route
 app.get("/", (req, res) => {
   res.send("NexoraStudy Server Running 🚀");
 });
 
-// 🔥 AI ROUTE
+// Ask route
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
@@ -25,7 +19,7 @@ app.get("/ask", async (req, res) => {
 
   let prompt = "";
 
-  // 👇 Developer / Founder logic
+  // Developer / Founder logic
   if (
     question.toLowerCase().includes("developer") ||
     question.toLowerCase().includes("founder") ||
@@ -40,26 +34,40 @@ app.get("/ask", async (req, res) => {
   }
 
   try {
-    const response = await groq.chat.completions.create({
-      model: "llama3-8b-8192",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama3-8b-8192",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      })
     });
 
-    const answer = response.choices[0].message.content;
+    const data = await response.json();
+
+    if (data.error) {
+      return res.send("API Error: " + data.error.message);
+    }
+
+    const answer = data.choices[0].message.content;
 
     res.send(answer);
+
   } catch (error) {
     console.error(error);
-    res.send("Server error ❌");
+    res.send("Server error ❌: " + error.message);
   }
 });
 
-// 🔥 PORT (IMPORTANT)
+// Port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
