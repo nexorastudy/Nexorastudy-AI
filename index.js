@@ -4,36 +4,35 @@ const cors = require("cors");
 
 const app = express();
 
-// CORS (important for MIT App)
+// ✅ Middleware
 app.use(cors());
+app.use(express.json());
 
-// Groq setup (secure - no hardcode)
+// ✅ Groq Setup (API key from Render ENV)
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// Home check
+// ✅ Home Route
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
-// Rate limit (basic protection)
+// ✅ Simple Rate Limit (per IP)
 let userRequests = {};
 
+// ✅ MAIN AI ROUTE
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
   if (!question) {
-    return res.send("No question provided");
+    return res.status(400).send("No question provided");
   }
 
   const userIP = req.ip;
 
-  // limit: 1 request per 2 sec
-  if (
-    userRequests[userIP] &&
-    Date.now() - userRequests[userIP] < 2000
-  ) {
+  // 🔒 Limit: 1 request per 2 sec
+  if (userRequests[userIP] && Date.now() - userRequests[userIP] < 2000) {
     return res.send("Wait 2 sec ⏳");
   }
 
@@ -41,27 +40,30 @@ app.get("/ask", async (req, res) => {
 
   try {
     const chatCompletion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
       messages: [
         {
           role: "user",
           content:
-            "Explain shortly in simple Hindi and English: " + question,
+            "Explain in simple Hindi and English:\n" + question,
         },
       ],
-      model: "llama-3.1-8b-instant",
     });
 
     const answer =
-      chatCompletion.choices[0]?.message?.content || "No answer";
+      chatCompletion.choices?.[0]?.message?.content || "No answer";
 
     res.send(answer);
-  } catch (err) {
-    res.send("Error: " + err.message);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("AI Error: " + error.message);
   }
 });
 
-const PORT = process.env.PORT || 3000;
+// ✅ Server Start
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log("🚀 Server running on port " + PORT);
 });
