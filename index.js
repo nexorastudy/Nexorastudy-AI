@@ -56,7 +56,7 @@ Rules:
     res.json({ answer });
 
   } catch (error) {
-    res.json({ answer: "Server busy ❌ Try again" });
+    res.send(answer);: "Server busy ❌ Try again" });
   }
 });
 
