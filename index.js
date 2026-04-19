@@ -7,29 +7,15 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🧠 Memory store
-let chatHistory = [];
-
 app.get("/ask", async (req, res) => {
-  const question = req.query.question;
+  let question = req.query.question;
 
-  // ❗ Empty input check
+  // 🔥 Fix 1: clean input
   if (!question || question.trim() === "") {
-    return res.json({ answer: "Please ask a proper question 😊" });
+    return res.json({ answer: "Please ask a valid question 😊" });
   }
 
   try {
-    // 👇 Save user message
-    chatHistory.push({
-      role: "user",
-      content: question
-    });
-
-    // 🔥 Keep last 6 messages only
-    if (chatHistory.length > 6) {
-      chatHistory = chatHistory.slice(-6);
-    }
-
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -42,58 +28,36 @@ app.get("/ask", async (req, res) => {
           {
             role: "system",
             content: `
-You are NexoraStudy AI, a helpful student assistant.
+You are NexoraStudy AI.
 
-STRICT RULES:
-- Give only direct answer to the question
-- Do NOT talk about TextBox, code, or input
-- Do NOT say "write something" or "ask again"
-- Answer in simple Hindi + English (Hinglish)
-- Keep answer clear and to the point
-- No unnecessary lines
+Rules:
+- Answer like a human teacher
+- Use simple Hindi + English
+- Always answer the question directly
+- Never talk about TextBox or code
+- Give helpful answers only
 `
           },
-          ...chatHistory
+          {
+            role: "user",
+            content: question
+          }
         ],
-        temperature: 0.5
+        temperature: 0.7
       })
     });
 
     const data = await response.json();
 
-    let answer;
-
-    if (data.choices && data.choices.length > 0) {
-      answer = data.choices[0].message.content.trim();
-
-      // 👇 Save AI reply
-      chatHistory.push({
-        role: "assistant",
-        content: answer
-      });
-
-    } else if (data.error) {
-      answer = "AI Error ❌: " + data.error.message;
-    } else {
-      answer = "No response ❌";
-    }
+    let answer =
+      data?.choices?.[0]?.message?.content ||
+      "Samajh nahi aaya 😅 dobara pucho";
 
     res.json({ answer });
 
   } catch (error) {
     res.json({ answer: "Server busy ❌ Try again" });
   }
-});
-
-// 🔥 Reset memory
-app.get("/reset", (req, res) => {
-  chatHistory = [];
-  res.send("Memory cleared 🧠");
-});
-
-// Test route
-app.get("/", (req, res) => {
-  res.send("NexoraStudy AI running 🚀");
 });
 
 app.listen(PORT, () => {
