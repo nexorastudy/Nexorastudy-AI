@@ -10,7 +10,6 @@ const PORT = process.env.PORT || 3000;
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
-  // input check
   if (!question || question.trim() === "") {
     return res.send("Kuch pucho 😊");
   }
@@ -27,7 +26,7 @@ app.get("/ask", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Answer in simple Hindi + English. Be helpful."
+            content: "You are a helpful AI. Answer the question simply in Hindi and English. Do not talk about TextBox or code."
           },
           {
             role: "user",
@@ -40,22 +39,17 @@ app.get("/ask", async (req, res) => {
 
     const data = await response.json();
 
-    let answer =
+    const answer =
       data?.choices?.[0]?.message?.content ||
       "Samajh nahi aaya 😅";
 
-    // 🔥 IMPORTANT: plain text send karo (NO JSON)
     res.send(answer);
 
   } catch (error) {
-    res.send("Server busy ❌ Try again");
+    res.send("Server error ❌");
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("FINAL SERVER RUNNING ✅");
-});
-
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log("Server running...");
 });
