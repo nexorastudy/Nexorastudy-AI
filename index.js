@@ -8,11 +8,11 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 app.get("/ask", async (req, res) => {
-  let question = req.query.question;
+  const question = req.query.question;
 
-  // 🔥 Fix 1: clean input
+  // input check
   if (!question || question.trim() === "") {
-    return res.json({ answer: "Please ask a valid question 😊" });
+    return res.send("Kuch pucho 😊");
   }
 
   try {
@@ -27,23 +27,14 @@ app.get("/ask", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `
-You are NexoraStudy AI.
-
-Rules:
-- Answer like a human teacher
-- Use simple Hindi + English
-- Always answer the question directly
-- Never talk about TextBox or code
-- Give helpful answers only
-`
+            content: "Answer in simple Hindi + English. Be helpful."
           },
           {
             role: "user",
             content: question
           }
         ],
-        temperature: 0.7
+        temperature: 0.5
       })
     });
 
@@ -51,13 +42,18 @@ Rules:
 
     let answer =
       data?.choices?.[0]?.message?.content ||
-      "Samajh nahi aaya 😅 dobara pucho";
+      "Samajh nahi aaya 😅";
 
-    res.json({ answer });
+    // 🔥 IMPORTANT: plain text send karo (NO JSON)
+    res.send(answer);
 
   } catch (error) {
-    res.send(answer);: "Server busy ❌ Try again" });
+    res.send("Server busy ❌ Try again");
   }
+});
+
+app.get("/", (req, res) => {
+  res.send("FINAL SERVER RUNNING ✅");
 });
 
 app.listen(PORT, () => {
