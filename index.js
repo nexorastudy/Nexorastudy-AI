@@ -1,29 +1,22 @@
-app.get("/reset", (req, res) => {
-  res.send("RESET WORKING 999 🚀");
-});import express from "express";
+import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
 
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🧠 Memory store
-let chatHistory = [];
-
-// 🟢 HOME CHECK
+// 🟢 HOME
 app.get("/", (req, res) => {
   res.send("SERVER WORKING ✅");
 });
 
-// 🔥 RESET ROUTE
+// 🔥 RESET
 app.get("/reset", (req, res) => {
-  chatHistory = [];
   res.send("Memory cleared 🧠");
 });
 
-// 🤖 ASK ROUTE
+// 🤖 ASK
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
@@ -32,17 +25,6 @@ app.get("/ask", async (req, res) => {
   }
 
   try {
-    // 👉 user message add
-    chatHistory.push({
-      role: "user",
-      content: question
-    });
-
-    // 👉 limit memory
-    if (chatHistory.length > 6) {
-      chatHistory = chatHistory.slice(-6);
-    }
-
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -58,13 +40,16 @@ app.get("/ask", async (req, res) => {
 You are NexoraStudy AI.
 
 Rules:
-- Answer like a human teacher
+- Answer like a friendly teacher
 - Use simple Hindi + English mix
-- DO NOT talk about TextBox, code, or debugging
-- Give clear and helpful answers
+- NEVER talk about TextBox, code, UI
+- If user says hi → reply normally
 `
           },
-          ...chatHistory
+          {
+            role: "user",
+            content: `Student question: ${question}`
+          }
         ],
         temperature: 0.7
       })
@@ -75,12 +60,6 @@ Rules:
     let answer =
       data?.choices?.[0]?.message?.content ||
       "Samajh nahi aaya 😅";
-
-    // 👉 AI answer save
-    chatHistory.push({
-      role: "assistant",
-      content: answer
-    });
 
     res.json({ answer });
 
