@@ -11,12 +11,7 @@ app.get("/", (req, res) => {
   res.send("SERVER WORKING ✅");
 });
 
-// 🔥 RESET
-app.get("/reset", (req, res) => {
-  res.send("Memory cleared 🧠");
-});
-
-// 🤖 ASK
+// 🤖 ASK ROUTE
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
@@ -36,19 +31,11 @@ app.get("/ask", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `
-You are NexoraStudy AI.
-
-Rules:
-- Answer like a friendly teacher
-- Use simple Hindi + English mix
-- NEVER talk about TextBox, code, UI
-- If user says hi → reply normally
-`
+            content: "You are a helpful student assistant. Reply in simple Hindi + English mix. Never mention code or TextBox."
           },
           {
             role: "user",
-            content: `Student question: ${question}`
+            content: question
           }
         ],
         temperature: 0.7
@@ -60,6 +47,13 @@ Rules:
     let answer =
       data?.choices?.[0]?.message?.content ||
       "Samajh nahi aaya 😅";
+
+    // 🔥 CLEANING (MAIN FIX)
+    answer = answer
+      .replace(/\\n/g, " ")   // remove \n
+      .replace(/\n/g, " ")    // remove real new lines
+      .replace(/\"/g, "")     // remove extra quotes
+      .trim();
 
     res.json({ answer });
 
