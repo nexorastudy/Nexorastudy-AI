@@ -1,4 +1,6 @@
-import express from "express";
+app.get("/reset", (req, res) => {
+  res.send("RESET WORKING 999 🚀");
+});import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 
