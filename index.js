@@ -7,7 +7,6 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🧠 Simple memory (last 6 messages)
 let chatHistory = [];
 
 // 🟢 HOME
@@ -15,13 +14,13 @@ app.get("/", (req, res) => {
   res.send("SERVER WORKING ✅");
 });
 
-// 🔄 RESET MEMORY
+// 🔄 RESET
 app.get("/reset", (req, res) => {
   chatHistory = [];
   res.send("Memory cleared 🧠");
 });
 
-// 🤖 ASK ROUTE
+// 🤖 ASK
 app.get("/ask", async (req, res) => {
   const question = req.query.question;
 
@@ -30,13 +29,11 @@ app.get("/ask", async (req, res) => {
   }
 
   try {
-    // 👉 Save user message
     chatHistory.push({
       role: "user",
       content: question
     });
 
-    // 👉 Limit memory
     if (chatHistory.length > 6) {
       chatHistory = chatHistory.slice(-6);
     }
@@ -59,10 +56,8 @@ Rules:
 - Answer like a friendly teacher 😊
 - Use simple Hindi + English mix
 - Keep answers clean and well spaced
-- Use 2-4 relevant emojis (😊📚✨🔥)
+- Use 2-4 relevant emojis
 - Do NOT overuse emojis
-- Make answers easy to read (use paragraphs)
-- Never mention code, TextBox, or debugging
 `
           },
           ...chatHistory
@@ -77,20 +72,21 @@ Rules:
       data?.choices?.[0]?.message?.content ||
       "Samajh nahi aaya 😅";
 
-    // ✅ CLEAN + FORMAT (IMPORTANT)
+    // ✅ CLEAN FIX (IMPORTANT)
     answer = answer
-      .replace(/\\n/g, "\n")        // keep line breaks
-      .replace(/\n{3,}/g, "\n\n")   // max 2 line gap
-      .replace(/\"/g, "")           // remove quotes
+      .replace(/\\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
 
-    // 👉 Save AI response
     chatHistory.push({
       role: "assistant",
       content: answer
     });
 
-    res.json({ answer });
+    // ✅ ALWAYS RETURN CLEAN JSON
+    res.json({
+      answer: answer
+    });
 
   } catch (error) {
     console.error(error);
@@ -98,7 +94,6 @@ Rules:
   }
 });
 
-// 🚀 START SERVER
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
