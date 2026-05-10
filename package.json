@@ -1,8 +1,9 @@
 {
   "name": "nexorastudy-ai",
   "version": "1.0.0",
-  "type": "module",
+  "description": "NexoraStudy AI Backend",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
