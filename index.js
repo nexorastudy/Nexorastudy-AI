@@ -1,5 +1,6 @@
-  import express from "express";
+import express from "express";
 import cors from "cors";
+import fetch from "node-fetch";
 
 const app = express();
 
@@ -7,24 +8,24 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🟢 HOME
+// 🟢 HOME ROUTE
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running ✅");
 });
 
-// 🤖 ASK AI
+// 🤖 ASK AI ROUTE
 app.get("/ask", async (req, res) => {
 
   const question = req.query.question;
 
-  // EMPTY QUESTION
+  // EMPTY QUESTION CHECK
   if (!question || question.trim() === "") {
     return res.send("Kuch pucho 😊");
   }
 
   try {
 
-    // ⚡ GROQ API CALL
+    // ⚡ GROQ API REQUEST
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -49,9 +50,9 @@ You are NexoraStudy AI.
 Rules:
 - Answer fast
 - Use simple Hindi + English
-- Keep answers short and clean
 - Friendly teacher style 😊
-- Do NOT use difficult words
+- Keep answers clean and short
+- Do not use difficult words
 `
             },
 
@@ -67,9 +68,10 @@ Rules:
       }
     );
 
+    // ✅ CONVERT RESPONSE
     const data = await response.json();
 
-    // ✅ GET CLEAN ANSWER
+    // ✅ GET AI ANSWER
     let answer =
       data?.choices?.[0]?.message?.content ||
       "Samajh nahi aaya 😅";
@@ -80,14 +82,14 @@ Rules:
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
-    // ✅ SEND ONLY TEXT (NO JSON)
+    // ✅ SEND CLEAN TEXT ONLY
     res.send(answer);
 
   } catch (error) {
 
     console.log(error);
 
-    // ❌ ERROR MESSAGE
+    // ❌ ERROR RESPONSE
     res.send("Server busy ❌ Try again");
   }
 });
