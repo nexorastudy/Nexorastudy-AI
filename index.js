@@ -1,4 +1,4 @@
-import express from "express";
+  import express from "express";
 import cors from "cors";
 
 const app = express();
@@ -7,43 +7,24 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-let chatHistory = [];
-
 // 🟢 HOME
 app.get("/", (req, res) => {
-  res.send("SERVER WORKING ✅");
-});
-
-// 🔄 RESET MEMORY
-app.get("/reset", (req, res) => {
-  chatHistory = [];
-  res.send("Memory cleared 🧠");
+  res.send("NexoraStudy AI Running ✅");
 });
 
 // 🤖 ASK AI
 app.get("/ask", async (req, res) => {
+
   const question = req.query.question;
 
+  // EMPTY QUESTION
   if (!question || question.trim() === "") {
-    return res.json({
-      answer: "Kuch pucho 😊"
-    });
+    return res.send("Kuch pucho 😊");
   }
 
   try {
 
-    // USER MESSAGE SAVE
-    chatHistory.push({
-      role: "user",
-      content: question
-    });
-
-    // MEMORY LIMIT
-    if (chatHistory.length > 6) {
-      chatHistory = chatHistory.slice(-6);
-    }
-
-    // GROQ API CALL
+    // ⚡ GROQ API CALL
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -55,7 +36,9 @@ app.get("/ask", async (req, res) => {
         },
 
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
+
+          // ⚡ FAST MODEL
+          model: "llama3-8b-8192",
 
           messages: [
             {
@@ -64,56 +47,52 @@ app.get("/ask", async (req, res) => {
 You are NexoraStudy AI.
 
 Rules:
-- Answer like a friendly teacher 😊
-- Use simple Hindi + English mix
-- Keep answers clean and readable
-- Use 2-4 emojis maximum
-- Do NOT overuse emojis
+- Answer fast
+- Use simple Hindi + English
+- Keep answers short and clean
+- Friendly teacher style 😊
+- Do NOT use difficult words
 `
             },
 
-            ...chatHistory
+            {
+              role: "user",
+              content: question
+            }
           ],
 
-          temperature: 0.7
+          temperature: 0.5,
+          max_tokens: 200
         })
       }
     );
 
     const data = await response.json();
 
+    // ✅ GET CLEAN ANSWER
     let answer =
       data?.choices?.[0]?.message?.content ||
       "Samajh nahi aaya 😅";
 
-    // CLEAN TEXT
+    // ✅ CLEAN TEXT
     answer = answer
       .replace(/\\n/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
 
-    // SAVE AI RESPONSE
-    chatHistory.push({
-      role: "assistant",
-      content: answer
-    });
-
-    // FINAL RESPONSE
-    res.json({
-      answer: answer
-    });
+    // ✅ SEND ONLY TEXT (NO JSON)
+    res.send(answer);
 
   } catch (error) {
 
     console.log(error);
 
-    res.json({
-      answer: "Server busy ❌ Try again"
-    });
+    // ❌ ERROR MESSAGE
+    res.send("Server busy ❌ Try again");
   }
 });
 
-// START SERVER
+// 🚀 START SERVER
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
