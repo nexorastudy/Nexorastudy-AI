@@ -8,38 +8,38 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🟢 HOME ROUTE
+// 🟢 HOME
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running ✅");
 });
 
-// 🤖 ASK AI ROUTE
+// 🤖 ASK AI
 app.get("/ask", async (req, res) => {
 
   const question = req.query.question;
 
-  // EMPTY QUESTION CHECK
+  // EMPTY QUESTION
   if (!question || question.trim() === "") {
     return res.send("Kuch pucho 😊");
   }
 
   try {
 
-    // ⚡ GROQ API REQUEST
+    // ⚡ GROQ API
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
 
         headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
           "Content-Type": "application/json"
         },
 
         body: JSON.stringify({
 
-          // ⚡ FAST MODEL
-          model: "llama3-8b-8192",
+          // ✅ WORKING MODEL
+          model: "llama-3.1-8b-instant",
 
           messages: [
             {
@@ -48,11 +48,9 @@ app.get("/ask", async (req, res) => {
 You are NexoraStudy AI.
 
 Rules:
-- Answer fast
+- Answer like a friendly teacher 😊
 - Use simple Hindi + English
-- Friendly teacher style 😊
-- Keep answers clean and short
-- Do not use difficult words
+- Keep answers short and clean
 `
             },
 
@@ -68,29 +66,32 @@ Rules:
       }
     );
 
-    // ✅ CONVERT RESPONSE
+    // ✅ API RESPONSE
     const data = await response.json();
 
-    // ✅ GET AI ANSWER
-    let answer =
-      data?.choices?.[0]?.message?.content ||
-      "Samajh nahi aaya 😅";
+    console.log(data);
 
-    // ✅ CLEAN TEXT
-    answer = answer
-      .replace(/\\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    // ✅ GET ANSWER
+    const answer =
+      data?.choices?.[0]?.message?.content;
 
-    // ✅ SEND CLEAN TEXT ONLY
-    res.send(answer);
+    // ❌ IF NO ANSWER
+    if (!answer) {
+      return res.send("AI answer nahi mila 😅");
+    }
+
+    // ✅ SEND CLEAN TEXT
+    res.send(
+      answer
+        .replace(/\\n/g, "\n")
+        .trim()
+    );
 
   } catch (error) {
 
     console.log(error);
 
-    // ❌ ERROR RESPONSE
-    res.send("Server busy ❌ Try again");
+    res.send("Server busy ❌");
   }
 });
 
