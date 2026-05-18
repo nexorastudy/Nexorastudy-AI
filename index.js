@@ -8,22 +8,24 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🟢 HOME
+// 🟢 HOME ROUTE
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
-// 🤖 ASK AI
+// 🤖 ASK AI ROUTE
 app.get("/ask", async (req, res) => {
 
   const question = req.query.question;
 
+  // ❌ EMPTY QUESTION
   if (!question || question.trim() === "") {
     return res.send("Kuch pucho 😊");
   }
 
   try {
 
+    // ⚡ GROQ API CALL
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -36,13 +38,14 @@ app.get("/ask", async (req, res) => {
 
         body: JSON.stringify({
 
+          // ⚡ FAST MODEL
           model: "llama-3.1-8b-instant",
 
           messages: [
             {
               role: "system",
               content:
-                "You are NexoraStudy AI. Reply in simple Hindi + English like a friendly teacher."
+                "You are NexoraStudy AI. Reply in simple Hindi and English like a friendly teacher."
             },
 
             {
@@ -57,17 +60,17 @@ app.get("/ask", async (req, res) => {
       }
     );
 
-    // ✅ RAW DATA
+    // ✅ CONVERT RESPONSE
     const data = await response.json();
 
     console.log(data);
 
-    // ❌ API ERROR CHECK
+    // ❌ API ERROR
     if (data.error) {
       return res.send("API Error ❌");
     }
 
-    // ✅ ANSWER
+    // ✅ GET ANSWER
     let answer =
       data?.choices?.[0]?.message?.content;
 
@@ -76,9 +79,10 @@ app.get("/ask", async (req, res) => {
       return res.send("Answer nahi mila 😅");
     }
 
-    // ✅ CLEAN
+    // ✨ CLEAN ANSWER
     answer = answer
       .replace(/\\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
 
     // ✅ SEND CLEAN TEXT
@@ -88,11 +92,12 @@ app.get("/ask", async (req, res) => {
 
     console.log(error);
 
+    // ❌ SERVER ERROR
     res.send("Server busy ❌");
   }
 });
 
-// 🚀 START
+// 🚀 START SERVER
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
