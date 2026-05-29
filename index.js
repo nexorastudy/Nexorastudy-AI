@@ -38,8 +38,8 @@ app.get("/ask", async (req, res) => {
 
         body: JSON.stringify({
 
-          // ⚡ FAST MODEL
-          model: "llama3-8b-8192",
+          // ✅ WORKING FAST MODEL
+          model: "llama-3.1-8b-instant",
 
           messages: [
 
@@ -57,17 +57,17 @@ app.get("/ask", async (req, res) => {
 
           ],
 
-          // ⚡ FASTER RESPONSE
+          // ⚡ FAST RESPONSE
           temperature: 0.2,
 
-          // ⚡ SHORT ANSWERS = FAST SPEED
+          // ⚡ SHORT ANSWERS
           max_tokens: 60
 
         })
       }
     );
 
-    // ✅ RESPONSE JSON
+    // ✅ JSON RESPONSE
     const data = await response.json();
 
     console.log(data);
