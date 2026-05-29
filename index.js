@@ -20,7 +20,7 @@ app.get("/ask", async (req, res) => {
 
   // ❌ EMPTY QUESTION
   if (!question || question.trim() === "") {
-    return res.send("Kuch pucho 😊");
+    return res.send("🤔 Pehle kuch pucho...");
   }
 
   try {
@@ -39,35 +39,42 @@ app.get("/ask", async (req, res) => {
         body: JSON.stringify({
 
           // ⚡ FAST MODEL
-          model: "llama-3.1-8b-instant",
+          model: "llama3-8b-8192",
 
           messages: [
+
             {
               role: "system",
+
               content:
-                "You are NexoraStudy AI. Reply in simple Hindi and English like a friendly teacher."
+                "You are NexoraStudy AI. Give short, smart and fast answers in simple Hindi and English like a friendly teacher."
             },
 
             {
               role: "user",
               content: question
             }
+
           ],
 
-          temperature: 0.5,
-          max_tokens: 200
+          // ⚡ FASTER RESPONSE
+          temperature: 0.2,
+
+          // ⚡ SHORT ANSWERS = FAST SPEED
+          max_tokens: 60
+
         })
       }
     );
 
-    // ✅ CONVERT RESPONSE
+    // ✅ RESPONSE JSON
     const data = await response.json();
 
     console.log(data);
 
     // ❌ API ERROR
     if (data.error) {
-      return res.send("API Error ❌");
+      return res.send("❌ API Error");
     }
 
     // ✅ GET ANSWER
@@ -76,16 +83,16 @@ app.get("/ask", async (req, res) => {
 
     // ❌ NO ANSWER
     if (!answer) {
-      return res.send("Answer nahi mila 😅");
+      return res.send("😅 Answer nahi mila");
     }
 
     // ✨ CLEAN ANSWER
     answer = answer
       .replace(/\\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
+      .replace(/\n{2,}/g, "\n")
       .trim();
 
-    // ✅ SEND CLEAN TEXT
+    // ✅ SEND ANSWER
     res.send(answer);
 
   } catch (error) {
@@ -93,7 +100,7 @@ app.get("/ask", async (req, res) => {
     console.log(error);
 
     // ❌ SERVER ERROR
-    res.send("Server busy ❌");
+    res.send("🚫 Server busy, try again");
   }
 });
 
