@@ -8,24 +8,22 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// 🟢 HOME ROUTE
+// HOME
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
-// 🤖 ASK AI ROUTE
+// ASK AI
 app.get("/ask", async (req, res) => {
 
   const question = req.query.question;
 
-  // ❌ EMPTY QUESTION
   if (!question || question.trim() === "") {
     return res.send("🤔 Pehle kuch pucho...");
   }
 
   try {
 
-    // ⚡ GROQ API CALL
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -38,7 +36,6 @@ app.get("/ask", async (req, res) => {
 
         body: JSON.stringify({
 
-          // ✅ WORKING FAST MODEL
           model: "llama-3.1-8b-instant",
 
           messages: [
@@ -46,8 +43,25 @@ app.get("/ask", async (req, res) => {
             {
               role: "system",
 
-              content:
-                "You are NexoraStudy AI. Give short, smart and fast answers in simple Hindi and English like a friendly teacher."
+              content: `
+You are NexoraStudy AI, a friendly educational assistant.
+
+Rules:
+
+- Reply in the same language as the user.
+- Answer exactly according to the user's question.
+- Short question = short answer.
+- Detailed question = detailed answer.
+- For Maths, Accounts, Science, Reasoning and Direction-Distance:
+  • Solve step by step.
+  • Verify calculations.
+  • Give final answer clearly.
+- Never guess facts.
+- If unsure, say so clearly.
+- Use simple student-friendly language.
+- Avoid unnecessary information.
+- Provide examples only when useful.
+`
             },
 
             {
@@ -57,54 +71,50 @@ app.get("/ask", async (req, res) => {
 
           ],
 
-          // ⚡ FAST RESPONSE
-          temperature: 0.2,
+          temperature: 0.1,
 
-          // ⚡ SHORT ANSWERS
-          max_tokens: 60
+          max_tokens: 300
 
         })
       }
     );
 
-    // ✅ JSON RESPONSE
     const data = await response.json();
 
-    console.log(data);
-
-    // ❌ API ERROR
     if (data.error) {
-      return res.send("❌ API Error");
+      console.log(data.error);
+      return res.send(
+        "❌ API Error: " + data.error.message
+      );
     }
 
-    // ✅ GET ANSWER
     let answer =
       data?.choices?.[0]?.message?.content;
 
-    // ❌ NO ANSWER
     if (!answer) {
       return res.send("😅 Answer nahi mila");
     }
 
-    // ✨ CLEAN ANSWER
     answer = answer
       .replace(/\\n/g, "\n")
       .replace(/\n{2,}/g, "\n")
       .trim();
 
-    // ✅ SEND ANSWER
     res.send(answer);
 
   } catch (error) {
 
     console.log(error);
 
-    // ❌ SERVER ERROR
-    res.send("🚫 Server busy, try again");
+    res.send(
+      "🚫 Server busy. Please try again."
+    );
   }
 });
 
-// 🚀 START SERVER
+// START SERVER
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+  console.log(
+    "NexoraStudy AI running on port " + PORT
+  );
 });
