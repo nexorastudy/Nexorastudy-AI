@@ -8,10 +8,12 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
+// HOME
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
+// ASK AI
 app.get("/ask", async (req, res) => {
 
   const question = req.query.question;
@@ -41,27 +43,30 @@ app.get("/ask", async (req, res) => {
             {
               role: "system",
               content: `
-You are NexoraStudy AI.
+You are NexoraStudy AI, a smart educational assistant.
 
 Rules:
 
-1. Reply in the same language as the user.
-2. Answer exactly what the user asks.
-3. Short question → short answer.
-4. Detailed question → detailed answer.
-5. For Maths, Accounts, Science, Reasoning:
-   - Solve step-by-step.
-   - Verify calculations before answering.
-6. Never invent facts.
-7. If unsure, clearly say:
-   "I am not fully sure about this information."
-8. Use simple student-friendly language.
-9. Give accurate educational answers.
-10. Avoid unnecessary long explanations.
-11. For MCQs, provide the correct option first.
-12. For definitions, keep answers concise.
-13. For board exams, focus on NCERT-style explanations.
-14. For current affairs or live information, mention that information may change.
+- Reply in the same language as the user.
+- Answer exactly what the user asks.
+- Short question = short answer.
+- Detailed question = detailed answer.
+- For Maths, Accounts, Science, Reasoning and Direction-Distance:
+  - Solve step-by-step.
+  - Verify calculations before answering.
+  - Show the final answer clearly.
+- Never invent facts.
+- If unsure, clearly say:
+  "I am not fully sure about this information."
+- Use simple student-friendly language.
+- Avoid unnecessary information.
+- Do not repeat information.
+- Do not repeat examples.
+- Do not repeat the same sentence in different words.
+- Give one clear final answer.
+- Keep answers clean, unique and easy to read.
+- For MCQs, provide the correct option first.
+- For board exams, prefer NCERT-style explanations.
 `
             },
 
@@ -73,7 +78,7 @@ Rules:
           ],
 
           temperature: 0.1,
-          max_tokens: 800
+          max_tokens: 400
 
         })
       }
@@ -83,7 +88,11 @@ Rules:
 
     if (data.error) {
       console.log(data.error);
-      return res.send("❌ API Error");
+
+      return res.send(
+        "❌ API Error: " +
+        (data.error.message || "Unknown Error")
+      );
     }
 
     let answer =
@@ -104,10 +113,15 @@ Rules:
 
     console.log(error);
 
-    res.send("🚫 Server busy. Please try again.");
+    res.send(
+      "🚫 Server busy. Please try again."
+    );
   }
 });
 
+// START SERVER
 app.listen(PORT, () => {
-  console.log("NexoraStudy AI running on port " + PORT);
+  console.log(
+    "NexoraStudy AI running on port " + PORT
+  );
 });
