@@ -8,12 +8,10 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// HOME
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
-// ASK AI
 app.get("/ask", async (req, res) => {
 
   const question = req.query.question;
@@ -36,31 +34,34 @@ app.get("/ask", async (req, res) => {
 
         body: JSON.stringify({
 
-          model: "llama-3.1-8b-instant",
+          model: "llama-3.3-70b-versatile",
 
           messages: [
 
             {
               role: "system",
-
               content: `
-You are NexoraStudy AI, a friendly educational assistant.
+You are NexoraStudy AI.
 
 Rules:
 
-- Reply in the same language as the user.
-- Answer exactly according to the user's question.
-- Short question = short answer.
-- Detailed question = detailed answer.
-- For Maths, Accounts, Science, Reasoning and Direction-Distance:
-  • Solve step by step.
-  • Verify calculations.
-  • Give final answer clearly.
-- Never guess facts.
-- If unsure, say so clearly.
-- Use simple student-friendly language.
-- Avoid unnecessary information.
-- Provide examples only when useful.
+1. Reply in the same language as the user.
+2. Answer exactly what the user asks.
+3. Short question → short answer.
+4. Detailed question → detailed answer.
+5. For Maths, Accounts, Science, Reasoning:
+   - Solve step-by-step.
+   - Verify calculations before answering.
+6. Never invent facts.
+7. If unsure, clearly say:
+   "I am not fully sure about this information."
+8. Use simple student-friendly language.
+9. Give accurate educational answers.
+10. Avoid unnecessary long explanations.
+11. For MCQs, provide the correct option first.
+12. For definitions, keep answers concise.
+13. For board exams, focus on NCERT-style explanations.
+14. For current affairs or live information, mention that information may change.
 `
             },
 
@@ -72,8 +73,7 @@ Rules:
           ],
 
           temperature: 0.1,
-
-          max_tokens: 300
+          max_tokens: 800
 
         })
       }
@@ -83,9 +83,7 @@ Rules:
 
     if (data.error) {
       console.log(data.error);
-      return res.send(
-        "❌ API Error: " + data.error.message
-      );
+      return res.send("❌ API Error");
     }
 
     let answer =
@@ -106,15 +104,10 @@ Rules:
 
     console.log(error);
 
-    res.send(
-      "🚫 Server busy. Please try again."
-    );
+    res.send("🚫 Server busy. Please try again.");
   }
 });
 
-// START SERVER
 app.listen(PORT, () => {
-  console.log(
-    "NexoraStudy AI running on port " + PORT
-  );
+  console.log("NexoraStudy AI running on port " + PORT);
 });
