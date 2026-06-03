@@ -1,160 +1,130 @@
 import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-
 app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// HOME
-app.get("/", (req, res) => {
-res.send("NexoraStudy AI Running 🚀");
-});
+/* -----------------------------
+   WEB CONTEXT (TAVILY SEARCH)
+------------------------------*/
+async function getWebContext(question) {
+  try {
+    const result = await tavily.search({
+      query: question,
+      max_results: 3,
+      include_answer: false,
+      include_raw_content: false,
+    });
 
-// ASK AI
-app.get("/ask", async (req, res) => {
+    if (!result?.results?.length) return "";
 
-const question = req.query.question;
+    return result.results
+      .map((item, i) => {
+        return `Source ${i + 1}:\n${item.title}\n${item.content}`;
+      })
+      .join("\n\n");
 
-if (!question || question.trim() === "") {
-return res.send("🤔 Pehle kuch pucho...");
+  } catch (error) {
+    console.log("Tavily Error:", error);
+    return "";
+  }
 }
 
-try {
+/* -----------------------------
+   HOME ROUTE
+------------------------------*/
+app.get("/", (req, res) => {
+  res.send("NexoraStudy AI Running 🚀");
+});
 
-const response = await fetch(  
-  "https://api.groq.com/openai/v1/chat/completions",  
-  {  
-    method: "POST",  
+/* -----------------------------
+   ASK AI ROUTE
+------------------------------*/
+app.get("/ask", async (req, res) => {
+  const question = req.query.question;
 
-    headers: {  
-      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,  
-      "Content-Type": "application/json"  
-    },  
+  if (!question || question.trim() === "") {
+    return res.send("🤔 Pehle kuch pucho...");
+  }
 
-    body: JSON.stringify({  
+  try {
+    // OPTIONAL: web context (safe usage)
+    const webContext = await getWebContext(question);
 
-      model: "llama-3.1-8b-instant",  
-
-      messages: [  
-
-        {  
-          role: "system",  
-          content: `
-
+    const messages = [
+      {
+        role: "system",
+        content: `
 You are NexoraStudy AI, a smart educational assistant.
 
 Rules:
+- Reply in same language as user
+- Be clear and student friendly
+- For Maths/Science/Accounts: step-by-step solution
+- Never repeat lines or unnecessary info
+- If unsure say: "I am not fully sure about this information."
+- Keep answers clean and concise
 
-Reply in the same language as the user.
+If web context is provided, use it only if relevant:
+${webContext}
+        `,
+      },
+      {
+        role: "user",
+        content: question,
+      },
+    ];
 
-Answer exactly what the user asks.
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages,
+          temperature: 0.3,
+          max_tokens: 400,
+        }),
+      }
+    );
 
-Short question = short answer.
+    const data = await response.json();
 
-Detailed question = detailed answer.
+    if (!response.ok) {
+      return res.send("❌ API Error: " + JSON.stringify(data));
+    }
 
-For Maths, Accounts, Science, Reasoning and Direction-Distance:
+    let answer = data?.choices?.[0]?.message?.content;
 
-Solve step-by-step.
+    if (!answer) {
+      return res.send("😅 Answer nahi mila");
+    }
 
-Verify calculations before answering.
+    // clean output
+    answer = answer.replace(/\n{2,}/g, "\n").trim();
 
-Show the final answer clearly.
+    res.send(answer);
 
-
-Never invent facts.
-
-If unsure, clearly say:
-"I am not fully sure about this information."
-
-Use simple student-friendly language.
-
-Avoid unnecessary information.
-
-Do not repeat information.
-
-Do not repeat examples.
-
-Do not repeat the same sentence in different words.
-
-Never repeat a completed point.
-
-Give one clear final answer.
-
-Keep answers clean, unique and easy to read.
-
-For MCQs, provide the correct option first.
-
-For board exams, prefer NCERT-style explanations.
-
-Keep answers concise and non-redundant.
-
-Use bullet points only when useful.
-`
-},
-
-{  
-        role: "user",  
-        content: question  
-      }  
-
-    ],  
-
-    temperature: 0.3,  
-    max_tokens: 350  
-
-  })  
-}
-
-);
-
-const data = await response.json();
-
-if (data.error) {
-console.log(data.error);
-
-return res.send(  
-  "❌ API Error: " +  
-  (data.error.message || "Unknown Error")  
-);
-
-}
-
-let answer =
-data?.choices?.[0]?.message?.content;
-
-if (!answer) {
-return res.send("😅 Answer nahi mila");
-}
-
-answer = answer
-.replace(/\n/g, "\n")
-.replace(/\n{2,}/g, "\n")
-.trim();
-
-// Remove duplicate lines
-const uniqueLines = [...new Set(answer.split("\n"))];
-answer = uniqueLines.join("\n").trim();
-
-res.send(answer);
-
-} catch (error) {
-
-console.log(error);
-
-res.send(
-"🚫 Server busy. Please try again."
-);
-}
+  } catch (error) {
+    console.log(error);
+    res.send("🚫 Server busy. Please try again.");
+  }
 });
 
-
-// START SERVER
+/* -----------------------------
+   START SERVER
+------------------------------*/
 app.listen(PORT, () => {
-console.log(
-"NexoraStudy AI running on port " + PORT
-);
+  console.log(`NexoraStudy AI running on port ${PORT}`);
 });
