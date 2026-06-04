@@ -6,125 +6,127 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-/* -----------------------------
-   WEB CONTEXT (TAVILY SEARCH)
-------------------------------*/
-async function getWebContext(question) {
-  try {
-    const result = await tavily.search({
-      query: question,
-      max_results: 3,
-      include_answer: false,
-      include_raw_content: false,
-    });
+// HOME
+app.get("/", (req, res) => {
+res.send("NexoraStudy AI Running 🚀");
+});
 
-    if (!result?.results?.length) return "";
+// ASK AI
+app.get("/ask", async (req, res) => {
 
-    return result.results
-      .map((item, i) => {
-        return `Source ${i + 1}:\n${item.title}\n${item.content}`;
-      })
-      .join("\n\n");
+const question = req.query.question;
 
-  } catch (error) {
-    console.log("Tavily Error:", error);
-    return "";
-  }
+if (!question || question.trim() === "") {
+return res.send("🤔 Pehle kuch pucho...");
 }
 
-/* -----------------------------
-   HOME ROUTE
-------------------------------*/
-app.get("/", (req, res) => {
-  res.send("NexoraStudy AI Running 🚀");
-});
+try {
 
-/* -----------------------------
-   ASK AI ROUTE
-------------------------------*/
-app.get("/ask", async (req, res) => {
-  const question = req.query.question;
+const response = await fetch(
+  "https://api.groq.com/openai/v1/chat/completions",
+  {
+    method: "POST",
 
-  if (!question || question.trim() === "") {
-    return res.send("🤔 Pehle kuch pucho...");
-  }
+    headers: {
+      "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+      "Content-Type": "application/json"
+    },
 
-  try {
-    // OPTIONAL: web context (safe usage)
-    const webContext = await getWebContext(question);
+    body: JSON.stringify({
 
-    const messages = [
-      {
-        role: "system",
-        content: `
-You are NexoraStudy AI, a smart educational assistant.
+      model: "llama-3.1-8b-instant",
+
+      messages: [
+
+        {
+          role: "system",
+          content: `
+
+You are NexoraStudy AI.
 
 Rules:
-- Reply in same language as user
-- Be clear and student friendly
-- For Maths/Science/Accounts: step-by-step solution
-- Never repeat lines or unnecessary info
-- If unsure say: "I am not fully sure about this information."
-- Keep answers clean and concise
 
-If web context is provided, use it only if relevant:
-${webContext}
-        `,
-      },
-      {
+- Reply in the same language as the user.
+
+- Hindi question → Hindi answer.
+
+- English question → English answer.
+
+- Give accurate and student-friendly answers.
+
+- For Maths, Science and Accounts solve step-by-step.
+
+- Do not repeat information.
+
+- Keep answers clean and easy to understand.
+
+- For MCQs give the correct option first.
+
+- For board exams prefer NCERT-style explanations.
+
+- If information is uncertain, clearly mention it.
+  `
+  },
+  
+        {
         role: "user",
-        content: question,
-      },
-    ];
-
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages,
-          temperature: 0.3,
-          max_tokens: 400,
-        }),
+        content: question
       }
-    );
 
-    const data = await response.json();
+    ],
 
-    if (!response.ok) {
-      return res.send("❌ API Error: " + JSON.stringify(data));
-    }
+    temperature: 0.3,
+    max_tokens: 500
 
-    let answer = data?.choices?.[0]?.message?.content;
-
-    if (!answer) {
-      return res.send("😅 Answer nahi mila");
-    }
-
-    // clean output
-    answer = answer.replace(/\n{2,}/g, "\n").trim();
-
-    res.send(answer);
-
-  } catch (error) {
-    console.log(error);
-    res.send("🚫 Server busy. Please try again.");
+  })
+}
+  
+  );
+  
+  const data = await response.json();
+  
+  if (data.error) {
+  console.log(data.error);
+  
+  return res.send(
+  "❌ API Error: " +
+  (data.error.message || "Unknown Error")
+);
+  
   }
-});
+  
+  let answer =
+  data?.choices?.[0]?.message?.content;
+  
+  if (!answer) {
+  return res.send("😅 Answer nahi mila");
+  }
+  
+  answer = answer
+  .replace(/\n{2,}/g, "\n")
+  .trim();
+  
+  res.send(answer);
+  
+  } catch (error) {
+  
+  console.log(error);
+  
+  res.send(
+  "🚫 Server busy. Please try again."
+  );
+  }
+  });
 
-/* -----------------------------
-   START SERVER
-------------------------------*/
+// START SERVER
 app.listen(PORT, () => {
-  console.log(`NexoraStudy AI running on port ${PORT}`);
+console.log(
+"NexoraStudy AI running on port " + PORT
+);
 });
