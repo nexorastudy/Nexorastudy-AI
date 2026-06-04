@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-
+import fs from "fs";
 dotenv.config();
 
 const app = express();
@@ -10,8 +10,76 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;async function getWebContext(question) {
+  try {
+    const response = await fetch(
+      "https://api.tavily.com/search",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          api_key: process.env.TAVILY_API_KEY,
+          query: question,
+          max_results: 3
+        })
+      }
+    );
 
+    const data = await response.json();
+
+    return data.results
+      ?.map(item => `${item.title}\n${item.content}`)
+      .join("\n\n") || "";
+
+  } catch (error) {
+    console.log(error);
+    return "";
+  }
+}
+
+function getRagContext() {
+  try {
+    return fs.readFileSync(
+      "./data/ncert.txt",
+      "utf8"
+    ).slice(0, 3000);
+  } catch {
+    return "";
+  }
+}
+async function getWebContext(question) {
+  try {
+
+    const response = await fetch(
+      "https://api.tavily.com/search",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          api_key: process.env.TAVILY_API_KEY,
+          query: question,
+          max_results: 3
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.results) return "";
+
+    return data.results
+      .map(item => item.title + "\n" + item.content)
+      .join("\n\n");
+
+  } catch (error) {
+    console.log(error);
+    return "";
+  }
+}
 // HOME
 app.get("/", (req, res) => {
 res.send("NexoraStudy AI Running 🚀");
@@ -27,7 +95,9 @@ return res.send("🤔 Pehle kuch pucho...");
 }
 
 try {
-
+  const webContext = await getWebContext(question);
+const ragContext = getRagContext();
+const webContext = await getWebContext(question);
 const response = await fetch(
   "https://api.groq.com/openai/v1/chat/completions",
   {
@@ -40,7 +110,7 @@ const response = await fetch(
 
     body: JSON.stringify({
 
-      model: "llama-3.1-8b-instant",
+      model: "llama-3.3-70b-versatile",
 
       messages: [
 
@@ -48,7 +118,38 @@ const response = await fetch(
           role: "system",
           content: `
 
+You are NexoraStudy AI.WEB CONTEXT:
+content: `
 You are NexoraStudy AI.
+
+Always answer in:
+
+Hinglish:
+<answer>
+
+English:
+<answer>
+
+WEB CONTEXT:
+${webContext}
+
+RAG CONTEXT:
+${ragContext}
+
+Rules:
+
+- Use WEB CONTEXT for latest news,
+  current affairs and recent events.
+- Use RAG CONTEXT for study notes.
+- Maths/Science/Accounts:
+  solve step-by-step.
+- Never invent facts.
+- Keep answers student-friendly.
+`
+${webContext}
+
+Use WEB CONTEXT for latest news,
+current affairs and recent updates.
 
 Rules:
 
