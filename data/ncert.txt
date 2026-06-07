@@ -1,0 +1,9 @@
+Founder: Ajay Chaudhary
+
+NexoraStudy is an AI-powered educational platform.
+
+Features:
+- AI doubt solving
+- Hindi and English answers
+- Notes
+- Quizzes
