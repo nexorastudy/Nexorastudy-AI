@@ -26,7 +26,25 @@ async function getWebContext(question) {
   query: `${question} latest news`,
   topic: "news",
   days: 30,
-  max_results: 5
+  max_results: 2
+          const newsKeywords = [
+  "latest",
+  "news",
+  "today",
+  "current",
+  "2026",
+  "breaking"
+];
+
+const useWebSearch = newsKeywords.some(word =>
+  question.toLowerCase().includes(word)
+);
+
+let webContext = "";
+
+if (useWebSearch) {
+  webContext = await getWebContext(question);
+        }
 })
         })
       }
