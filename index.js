@@ -22,9 +22,12 @@ async function getWebContext(question) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          api_key: process.env.TAVILY_API_KEY,
-          query: question,
-          max_results: 5
+  api_key: process.env.TAVILY_API_KEY,
+  query: `${question} latest news`,
+  topic: "news",
+  days: 30,
+  max_results: 5
+})
         })
       }
     );
@@ -68,7 +71,8 @@ app.get("/ask", async (req, res) => {
       return res.send("Please ask a question.");
     }
 
-    const webContext = await getWebContext(question);
+    const webContext = await getWebContext(question);console.log("QUESTION:", question);
+console.log("WEB CONTEXT:", webContext);
     const ragContext = getRagContext();
 
     const groqResponse = await fetch(
@@ -110,7 +114,16 @@ Rules:
 - Maths, Science and Accounts step-by-step.
 - Never invent facts.
 - Keep answers student-friendly.
-`
+`IMPORTANT:
+- Always prioritize WEB CONTEXT over your training knowledge.
+- If WEB CONTEXT contains relevant information, use it.
+- Do not answer from old knowledge when WEB CONTEXT is available.
+- If information is uncertain, clearly mention it.
+                Current affairs / latest news → Tavily + Groq
+
+Maths / Science / Accounts → Groq only
+
+Founder / app info → RAG only
             },
             {
               role: "user",
