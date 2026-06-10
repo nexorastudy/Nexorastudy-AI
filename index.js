@@ -153,14 +153,24 @@ Format:
         })
       }
     );
+const data = await groqResponse.json();
 
-    const data = await groqResponse.json();
+console.log(
+  "GROQ RESPONSE:",
+  JSON.stringify(data, null, 2)
+);
 
-    const answer =
-      data?.choices?.[0]?.message?.content ||
-      "No answer found.";
+if (data.error) {
+  console.log("GROQ ERROR:", data.error);
+  return res.send("AI service temporarily unavailable.");
+}
 
-    res.send(answer);
+const answer =
+  data?.choices?.[0]?.message?.content ||
+  "No answer found.";
+
+res.send(answer);
+);
 
   } catch (error) {
     console.log(error);
