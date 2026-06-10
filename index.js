@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // --------------------
 // Tavily Web Search
@@ -75,7 +75,6 @@ app.get("/", (req, res) => {
 // --------------------
 app.get("/ask", async (req, res) => {
   try {
-
     const question = req.query.question;
 
     if (!question) {
@@ -125,14 +124,12 @@ ${webContext}
 RAG CONTEXT:
 ${ragContext}
 
-Answer Rules:
-- Always answer in Hindi and English.
-- Hindi must be in Devanagari script.
+Rules:
+- Answer in Hindi and English.
+- Hindi must be in Devanagari.
 - Use WEB CONTEXT for latest news.
 - Use RAG CONTEXT for study notes.
-- Maths, Science and Accounts step-by-step.
-- Never invent facts.
-- Keep answers student-friendly.
+- Keep answers student friendly.
 
 Format:
 
@@ -153,32 +150,32 @@ Format:
         })
       }
     );
-const data = await groqResponse.json();
 
-console.log(
-  "GROQ RESPONSE:",
-  JSON.stringify(data, null, 2)
-);
+    const data = await groqResponse.json();
 
-if (data.error) {
-  console.log("GROQ ERROR:", data.error);
-  return res.send("AI service temporarily unavailable.");
-}
+    console.log(
+      "GROQ RESPONSE:",
+      JSON.stringify(data, null, 2)
+    );
 
-const answer =
-  data?.choices?.[0]?.message?.content ||
-  "No answer found.";
+    if (data.error) {
+      console.log("GROQ ERROR:", data.error);
+      return res.send("AI service temporarily unavailable.");
+    }
 
-res.send(answer);
-);
+    const answer =
+      data?.choices?.[0]?.message?.content ||
+      "No answer found.";
+
+    res.send(answer);
 
   } catch (error) {
-    console.log(error);
+    console.log("SERVER ERROR:", error);
     res.status(500).send("Server Error");
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(
     `NexoraStudy AI running on port ${PORT}`
   );
