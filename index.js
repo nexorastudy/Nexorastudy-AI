@@ -160,7 +160,7 @@ Format:
 
     if (data.error) {
       console.log("GROQ ERROR:", data.error);
-      return res.send("AI service temporarily unavailable.");
+      return res.send(JSON.stringify(data, null, 2));
     }
 
     const answer =
