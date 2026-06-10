@@ -12,6 +12,10 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+
+// --------------------
+// Tavily Web Search
+// --------------------
 async function getWebContext(question) {
   try {
     const response = await fetch(
@@ -22,30 +26,10 @@ async function getWebContext(question) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-  api_key: process.env.TAVILY_API_KEY,
-  query: `${question} latest news`,
-  topic: "news",
-  days: 30,
-  max_results: 2
-          const newsKeywords = [
-  "latest",
-  "news",
-  "today",
-  "current",
-  "2026",
-  "breaking"
-];
-
-const useWebSearch = newsKeywords.some(word =>
-  question.toLowerCase().includes(word)
-);
-
-let webContext = "";
-
-if (useWebSearch) {
-  webContext = await getWebContext(question);
-        }
-})
+          api_key: process.env.TAVILY_API_KEY,
+          query: question,
+          topic: "general",
+          max_results: 3
         })
       }
     );
@@ -55,7 +39,7 @@ if (useWebSearch) {
     if (!data.results) return "";
 
     return data.results
-      .map(item => item.title + "\n" + item.content)
+      .map(item => `${item.title}\n${item.content}`)
       .join("\n\n");
 
   } catch (error) {
@@ -64,6 +48,9 @@ if (useWebSearch) {
   }
 }
 
+// --------------------
+// Local Study Notes
+// --------------------
 function getRagContext() {
   try {
     return fs.readFileSync(
@@ -76,10 +63,16 @@ function getRagContext() {
   }
 }
 
+// --------------------
+// Home Route
+// --------------------
 app.get("/", (req, res) => {
   res.send("NexoraStudy AI Running 🚀");
 });
 
+// --------------------
+// Ask Route
+// --------------------
 app.get("/ask", async (req, res) => {
   try {
 
@@ -89,8 +82,25 @@ app.get("/ask", async (req, res) => {
       return res.send("Please ask a question.");
     }
 
-    const webContext = await getWebContext(question);console.log("QUESTION:", question);
-console.log("WEB CONTEXT:", webContext);
+    const newsKeywords = [
+      "latest",
+      "news",
+      "today",
+      "current",
+      "2026",
+      "breaking"
+    ];
+
+    const useWebSearch = newsKeywords.some(word =>
+      question.toLowerCase().includes(word)
+    );
+
+    let webContext = "";
+
+    if (useWebSearch) {
+      webContext = await getWebContext(question);
+    }
+
     const ragContext = getRagContext();
 
     const groqResponse = await fetch(
@@ -99,8 +109,7 @@ console.log("WEB CONTEXT:", webContext);
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization:
-            `Bearer ${process.env.GROQ_API_KEY}`
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
@@ -116,32 +125,23 @@ ${webContext}
 RAG CONTEXT:
 ${ragContext}
 
-Answer Format:
-
-🇮🇳 हिंदी:
-[सरल हिंदी में उत्तर]
-
-🇬🇧 English:
-[Simple English answer]
-
-Rules:
-- Always answer in BOTH Hindi and English.
+Answer Rules:
+- Always answer in Hindi and English.
 - Hindi must be in Devanagari script.
-- Use WEB CONTEXT for latest news and current affairs.
+- Use WEB CONTEXT for latest news.
 - Use RAG CONTEXT for study notes.
 - Maths, Science and Accounts step-by-step.
 - Never invent facts.
 - Keep answers student-friendly.
-`IMPORTANT:
-- Always prioritize WEB CONTEXT over your training knowledge.
-- If WEB CONTEXT contains relevant information, use it.
-- Do not answer from old knowledge when WEB CONTEXT is available.
-- If information is uncertain, clearly mention it.
-                Current affairs / latest news → Tavily + Groq
 
-Maths / Science / Accounts → Groq only
+Format:
 
-Founder / app info → RAG only
+🇮🇳 हिंदी:
+[उत्तर]
+
+🇬🇧 English:
+[Answer]
+`
             },
             {
               role: "user",
@@ -164,7 +164,7 @@ Founder / app info → RAG only
 
   } catch (error) {
     console.log(error);
-    res.send("Server Error");
+    res.status(500).send("Server Error");
   }
 });
 
