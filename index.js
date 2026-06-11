@@ -13,7 +13,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000;
 
 /* -------------------------
-   SIMPLE CACHE (FAST)
+   SIMPLE CACHE
 --------------------------*/
 const cache = new Map();
 
@@ -37,7 +37,7 @@ function setCache(key, value) {
 }
 
 /* -------------------------
-   RAG (LOCAL FILE)
+   RAG (NCERT FILE)
 --------------------------*/
 function getRagContext() {
   try {
@@ -48,19 +48,7 @@ function getRagContext() {
 }
 
 /* -------------------------
-   TIMEOUT WRAPPER
---------------------------*/
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TIMEOUT")), ms)
-    )
-  ]);
-}
-
-/* -------------------------
-   TAVILY SEARCH
+   TAVILY WEB SEARCH
 --------------------------*/
 async function getWebContext(question) {
   try {
@@ -99,7 +87,7 @@ app.get("/", (req, res) => {
 });
 
 /* -------------------------
-   ASK ROUTE (FIXED)
+   ASK ROUTE
 --------------------------*/
 app.get("/ask", async (req, res) => {
   try {
@@ -118,20 +106,12 @@ app.get("/ask", async (req, res) => {
     }
 
     const rag = getRagContext();
+    const webContext = await getWebContext(question);
 
-    /* WEB CALL */
-    const webPromise = getWebContext(question);
-
-    let webContext = "";
-    try {
-      webContext = await withTimeout(webPromise, 4000);
-    } catch {
-      webContext = "";
-    }
-
-    /* AI CALL (OPENROUTER) */
-    const aiResponse = await withTimeout(
-      fetch("https://openrouter.ai/api/v1/chat/completions", {
+    /* AI CALL */
+    const aiResponse = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,47 +143,17 @@ ${rag}
               content: question
             }
           ],
-          const aiResponse = await fetch(
-  "https://openrouter.ai/api/v1/chat/completions",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: "google/gemma-3-9b-it:free",
-      messages: [
-        {
-          role: "system",
-          content: `
-You are NexoraStudy AI.
+          temperature: 0.2,
+          max_tokens: 800
+        })
+      }
+    );
 
-Answer in Hindi + English.
+    const data = await aiResponse.json();
 
-WEB:
-${webContext}
-
-RAG:
-${rag}
-`
-        },
-        {
-          role: "user",
-          content: question
-        }
-      ],
-      temperature: 0.2,
-      max_tokens: 800
-    })
-  }
-);
-
-const data = await aiResponse.json();
-
-const answer =
-  data?.choices?.[0]?.message?.content ||
-  "No answer found.";
+    const answer =
+      data?.choices?.[0]?.message?.content ||
+      "No answer found.";
 
     /* SAVE CACHE */
     setCache(key, answer);
@@ -217,8 +167,8 @@ const answer =
 });
 
 /* -------------------------
-   START SERVER (IMPORTANT)
+   START SERVER
 --------------------------*/
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("NexoraStudy AI running on port", PORT);
+  console.log(`NexoraStudy AI running on port ${PORT}`);
 });
