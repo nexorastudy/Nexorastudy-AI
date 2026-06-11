@@ -58,7 +58,7 @@ function getRagContext() {
     return fs.readFileSync(
       "./data/ncert.txt",
       "utf8"
-    ).slice(0, 3000);
+    ).slice(0, 1000);
   } catch (error) {
     console.log("RAG Error:", error);
     return "";
@@ -117,7 +117,10 @@ Rules:
 - Use WEB CONTEXT for latest information.
 - Use RAG CONTEXT for study notes.
 - Keep answers student friendly.
-
+- Hindi answer must be completely in Hindi (Devanagari script).
+- Do not use English words in the Hindi section except names of people, places, or organizations.
+- English answer must be completely in English.
+- Keep Hindi and English sections separate.
 Format:
 
 🇮🇳 हिंदी:
