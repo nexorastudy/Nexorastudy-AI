@@ -27,9 +27,8 @@ async function getWebContext(question) {
         },
         body: JSON.stringify({
           api_key: process.env.TAVILY_API_KEY,
-          query: `${question} latest`,
+          query: `${question} latest today`,
           topic: "news",
-          days: 30,
           search_depth: "advanced",
           max_results: 5
         })
@@ -77,32 +76,30 @@ app.get("/", (req, res) => {
 // --------------------
 app.get("/ask", async (req, res) => {
   try {
+
     const question = req.query.question;
 
     if (!question) {
       return res.send("Please ask a question.");
     }
 
-    // Always get web context
     const webContext = await getWebContext(question);
-   console.log("WEB CONTEXT:");
-console.log(webContext);
+
+    console.log("WEB CONTEXT:");
+    console.log(webContext);
+
     const ragContext = getRagContext();
 
-    const groqResponse = await fetch(
-  
-  "https://openrouter.ai/api/v1/chat/completions"
-      https://api.groq.com/openai/v1/chat/completions
-     {
+    const aiResponse = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`
-            Authorization: `Bearer ${process.env.GROQ_API_KEY}`
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: "google/gemma-3-9b-it:free"
-          model: "llama-3.1-8b-instant",
+          model: "google/gemma-3-9b-it:free",
           messages: [
             {
               role: "system",
@@ -115,23 +112,13 @@ ${webContext}
 RAG CONTEXT:
 ${ragContext}
 
-Rules:
-- Always answer in Hindi and English.
-- Hindi must be in Devanagari script.
-- Use WEB CONTEXT for latest information.
-- Use RAG CONTEXT for study notes.
-- Keep answers student friendly.
-- Hindi answer must be completely in Hindi (Devanagari script).
-- Do not use English words in the Hindi section except names of people, places, or organizations.
-- English answer must be completely in English.
-- Keep Hindi and English sections separate.
-Format:
+IMPORTANT:
+- For PM, CM, President, ministers, elections, sports, and current affairs use WEB CONTEXT first.
+- Never guess current affairs answers.
+- If WEB CONTEXT does not contain the answer, say:
+  "Latest information not available."
 
-🇮🇳 हिंदी:
-[उत्तर]
-
-🇬🇧 English:
-[Answer]
+Answer in Hindi and English.
 `
             },
             {
@@ -139,23 +126,22 @@ Format:
               content: question
             }
           ],
-          temperature: 0.3,
+          temperature: 0.2,
           max_tokens: 1000
         })
       }
     );
 
-    const data = await groqResponse.json();
+    const data = await aiResponse.json();
 
     console.log(
-      "GROQ RESPONSE:",
+      "AI RESPONSE:",
       JSON.stringify(data, null, 2)
     );
 
     if (data.error) {
-      console.log("GROQ ERROR:", data.error);
       return res.send(
-        `Groq Error: ${data.error.message}`
+        `AI Error: ${data.error.message}`
       );
     }
 
