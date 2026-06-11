@@ -163,18 +163,47 @@ ${rag}
               content: question
             }
           ],
-          temperature: 0.2,
-          max_tokens: 800
-        })
-      ),
-      8000
-    );
+          const aiResponse = await fetch(
+  "https://openrouter.ai/api/v1/chat/completions",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "google/gemma-3-9b-it:free",
+      messages: [
+        {
+          role: "system",
+          content: `
+You are NexoraStudy AI.
 
-    const data = await aiResponse.json();
+Answer in Hindi + English.
 
-    const answer =
-      data?.choices?.[0]?.message?.content ||
-      "No answer found.";
+WEB:
+${webContext}
+
+RAG:
+${rag}
+`
+        },
+        {
+          role: "user",
+          content: question
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 800
+    })
+  }
+);
+
+const data = await aiResponse.json();
+
+const answer =
+  data?.choices?.[0]?.message?.content ||
+  "No answer found.";
 
     /* SAVE CACHE */
     setCache(key, answer);
