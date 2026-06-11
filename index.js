@@ -26,13 +26,12 @@ async function getWebContext(question) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-  api_key: process.env.TAVILY_API_KEY,
-  query: `${question} latest`,
-  topic: "news",
-  days: 30,
-  search_depth: "advanced",
-  max_results: 5
-})
+          api_key: process.env.TAVILY_API_KEY,
+          query: `${question} latest`,
+          topic: "news",
+          days: 30,
+          search_depth: "advanced",
+          max_results: 5
         })
       }
     );
@@ -84,22 +83,8 @@ app.get("/ask", async (req, res) => {
       return res.send("Please ask a question.");
     }
 
-    const newsKeywords = [
-      "latest",
-      "news",
-      "today",
-      "current",
-      "2026",
-      "breaking"
-    ];
-
-    const useWebSearch = newsKeywords.some(word =>
-      question.toLowerCase().includes(word)
-    );
-
-    let webContext = "";
-
-   let webContext = await getWebContext(question);
+    // Always get web context
+    const webContext = await getWebContext(question);
 
     const ragContext = getRagContext();
 
@@ -126,31 +111,9 @@ RAG CONTEXT:
 ${ragContext}
 
 Rules:
-- Answer in Hindi and English.
-- Hindi must be in Devanagari.
-- Use WEB CONTEXT for latest news.
-- Use RAG CONTEXT for study notes.
-- Keep answers student friendly.
-
-Formula 
-body: JSON.stringify({
-  model: "llama-3.1-8b-instant",
-  messages: [
-    {
-      role: "system",
-      content: `
-You are NexoraStudy AI.
-
-WEB CONTEXT:
-${webContext}
-
-RAG CONTEXT:
-${ragContext}
-
-Rules:
-- Answer in Hindi and English.
-- Hindi must be in Devanagari.
-- Use WEB CONTEXT for latest news.
+- Always answer in Hindi and English.
+- Hindi must be in Devanagari script.
+- Use WEB CONTEXT for latest information.
 - Use RAG CONTEXT for study notes.
 - Keep answers student friendly.
 
@@ -162,15 +125,15 @@ Format:
 🇬🇧 English:
 [Answer]
 `
-    },
-    {
-      role: "user",
-      content: question
-    }
-  ],
-  temperature: 0.3,
-  max_tokens: 1000
-})
+            },
+            {
+              role: "user",
+              content: question
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 1000
+        })
       }
     );
 
@@ -183,7 +146,9 @@ Format:
 
     if (data.error) {
       console.log("GROQ ERROR:", data.error);
-      return res.send(JSON.stringify(data, null, 2));
+      return res.send(
+        `Groq Error: ${data.error.message}`
+      );
     }
 
     const answer =
