@@ -85,7 +85,8 @@ app.get("/ask", async (req, res) => {
 
     // Always get web context
     const webContext = await getWebContext(question);
-
+   console.log("WEB CONTEXT:");
+console.log(webContext);
     const ragContext = getRagContext();
 
     const groqResponse = await fetch(
