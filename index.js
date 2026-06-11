@@ -96,9 +96,7 @@ app.get("/ask", async (req, res) => {
 
     let webContext = "";
 
-    if (useWebSearch) {
-      webContext = await getWebContext(question);
-    }
+   let webContext = await getWebContext(question);
 
     const ragContext = getRagContext();
 
@@ -111,11 +109,33 @@ app.get("/ask", async (req, res) => {
           Authorization: `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant"
+          model: "llama-3.1-8b-instant",
           messages: [
             {
               role: "system",
               content: `
+You are NexoraStudy AI.
+
+WEB CONTEXT:
+${webContext}
+
+RAG CONTEXT:
+${ragContext}
+
+Rules:
+- Answer in Hindi and English.
+- Hindi must be in Devanagari.
+- Use WEB CONTEXT for latest news.
+- Use RAG CONTEXT for study notes.
+- Keep answers student friendly.
+
+Formula 
+body: JSON.stringify({
+  model: "llama-3.1-8b-instant",
+  messages: [
+    {
+      role: "system",
+      content: `
 You are NexoraStudy AI.
 
 WEB CONTEXT:
@@ -139,15 +159,15 @@ Format:
 🇬🇧 English:
 [Answer]
 `
-            },
-            {
-              role: "user",
-              content: question
-            }
-          ],
-          temperature: 0.3,
-          max_tokens: 1000
-        })
+    },
+    {
+      role: "user",
+      content: question
+    }
+  ],
+  temperature: 0.3,
+  max_tokens: 1000
+})
       }
     );
 
