@@ -22,8 +22,10 @@ async function getWebContext(question) {
       "https://api.tavily.com/search",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
+    headers: {
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`
+    }
         },
         body: JSON.stringify({
           api_key: process.env.TAVILY_API_KEY,
