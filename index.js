@@ -26,10 +26,13 @@ async function getWebContext(question) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          api_key: process.env.TAVILY_API_KEY,
-          query: question,
-          topic: "general",
-          max_results: 3
+  api_key: process.env.TAVILY_API_KEY,
+  query: `${question} latest`,
+  topic: "news",
+  days: 30,
+  search_depth: "advanced",
+  max_results: 5
+})
         })
       }
     );
