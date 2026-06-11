@@ -3,7 +3,6 @@ import cors from "cors";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import fs from "fs";
-import Redis from "ioredis";
 
 dotenv.config();
 
@@ -13,45 +12,33 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-/* -----------------------------
-   🔥 REDIS CACHE (PRO LEVEL)
-------------------------------*/
-const redis = new Redis(process.env.REDIS_URL);
+/* -------------------------
+   SIMPLE CACHE (FAST)
+--------------------------*/
+const cache = new Map();
 
-// fallback in-memory cache (if Redis fails)
-const memoryCache = new Map();
+function getCache(key) {
+  const data = cache.get(key);
+  if (!data) return null;
 
-async function getCache(key) {
-  try {
-    const redisData = await redis.get(key);
-    if (redisData) return JSON.parse(redisData);
-  } catch (e) {}
-
-  const mem = memoryCache.get(key);
-  if (!mem) return null;
-
-  if (Date.now() - mem.time < 10 * 60 * 1000) {
-    return mem.value;
+  if (Date.now() - data.time < 10 * 60 * 1000) {
+    return data.value;
   }
 
-  memoryCache.delete(key);
+  cache.delete(key);
   return null;
 }
 
-async function setCache(key, value) {
-  try {
-    await redis.setex(key, 600, JSON.stringify(value)); // 10 min
-  } catch (e) {}
-
-  memoryCache.set(key, {
+function setCache(key, value) {
+  cache.set(key, {
     value,
     time: Date.now()
   });
 }
 
-/* -----------------------------
-   📚 RAG (LOCAL NCERT)
-------------------------------*/
+/* -------------------------
+   RAG (LOCAL FILE)
+--------------------------*/
 function getRagContext() {
   try {
     return fs.readFileSync("./data/ncert.txt", "utf8").slice(0, 2000);
@@ -60,10 +47,10 @@ function getRagContext() {
   }
 }
 
-/* -----------------------------
-   🌐 TIMEOUT WRAPPER (ANTI-LAG)
-------------------------------*/
-function withTimeout(promise, ms = 5000) {
+/* -------------------------
+   TIMEOUT WRAPPER
+--------------------------*/
+function withTimeout(promise, ms) {
   return Promise.race([
     promise,
     new Promise((_, reject) =>
@@ -72,9 +59,9 @@ function withTimeout(promise, ms = 5000) {
   ]);
 }
 
-/* -----------------------------
-   🌍 TAVILY WEB SEARCH (OPTIMIZED)
-------------------------------*/
+/* -------------------------
+   TAVILY SEARCH
+--------------------------*/
 async function getWebContext(question) {
   try {
     const response = await fetch("https://api.tavily.com/search", {
@@ -98,37 +85,22 @@ async function getWebContext(question) {
       .map(r => `${r.title}\n${r.content}`)
       .join("\n\n");
 
-  } catch {
+  } catch (err) {
+    console.log("Tavily error:", err);
     return "";
   }
 }
 
-/* -----------------------------
-   🧠 SMART ROUTER (FAST vs DEEP)
-------------------------------*/
-function isCurrentAffairs(question) {
-  const keywords = [
-    "pm", "cm", "president",
-    "today", "latest", "news",
-    "election", "match", "score",
-    "current", "2026"
-  ];
-
-  return keywords.some(k =>
-    question.toLowerCase().includes(k)
-  );
-}
-
-/* -----------------------------
-   🚀 HOME
-------------------------------*/
+/* -------------------------
+   HOME
+--------------------------*/
 app.get("/", (req, res) => {
-  res.send("NexoraStudy AI Ultra Pro 🚀");
+  res.send("NexoraStudy AI Running 🚀");
 });
 
-/* -----------------------------
-   ⚡ MAIN ASK ROUTE (ULTRA PRO)
-------------------------------*/
+/* -------------------------
+   ASK ROUTE (FIXED)
+--------------------------*/
 app.get("/ask", async (req, res) => {
   try {
     const question = req.query.question;
@@ -139,25 +111,25 @@ app.get("/ask", async (req, res) => {
 
     const key = question.toLowerCase().trim();
 
-    /* 1. CACHE CHECK */
-    const cached = await getCache(key);
+    /* CACHE CHECK */
+    const cached = getCache(key);
     if (cached) {
       return res.send(cached + "\n\n⚡ Cached Answer");
     }
 
-    /* 2. SMART MODE */
-    const needWeb = isCurrentAffairs(question);
-
-    /* 3. PARALLEL EXECUTION */
     const rag = getRagContext();
 
-    const webPromise = needWeb
-      ? withTimeout(getWebContext(question), 4000)
-      : Promise.resolve("");
+    /* WEB CALL */
+    const webPromise = getWebContext(question);
 
-    const webContext = await webPromise.catch(() => "");
+    let webContext = "";
+    try {
+      webContext = await withTimeout(webPromise, 4000);
+    } catch {
+      webContext = "";
+    }
 
-    /* 4. AI CALL */
+    /* AI CALL (OPENROUTER) */
     const aiResponse = await withTimeout(
       fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
@@ -171,13 +143,13 @@ app.get("/ask", async (req, res) => {
             {
               role: "system",
               content: `
-You are NexoraStudy Ultra AI.
+You are NexoraStudy AI.
 
-RULES:
+Rules:
 - Answer in Hindi + English
-- Be short, smart, and accurate
-- Use WEB only if available
-- If no data: say "Latest info not available"
+- Be short and clear
+- Use web context if available
+- If not, say "Latest info not available"
 
 WEB:
 ${webContext}
@@ -204,20 +176,20 @@ ${rag}
       data?.choices?.[0]?.message?.content ||
       "No answer found.";
 
-    /* 5. SAVE CACHE */
-    await setCache(key, answer);
+    /* SAVE CACHE */
+    setCache(key, answer);
 
     res.send(answer);
 
   } catch (error) {
-    console.log("ULTRA PRO ERROR:", error);
+    console.log("ERROR:", error);
     res.status(500).send("Server Error");
   }
 });
 
-/* -----------------------------
-   🚀 START SERVER
-------------------------------*/
+/* -------------------------
+   START SERVER (IMPORTANT)
+--------------------------*/
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`NexoraStudy Ultra Pro running on ${PORT}`);
+  console.log("NexoraStudy AI running on port", PORT);
 });
