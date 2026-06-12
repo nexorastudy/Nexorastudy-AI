@@ -228,9 +228,14 @@ Format:
       }
     }
 
-    if (!answer) {
-      answer =
-        "Sorry, no response generated.";
+    if (!answer || answer.trim() === "") {
+  answer = `
+🇮🇳 हिंदी:
+अभी उत्तर प्राप्त नहीं हो सका। कृपया कुछ सेकंड बाद फिर प्रयास करें।
+
+🇬🇧 English:
+Unable to generate a response right now. Please try again in a few seconds.
+`;
     }
 
     res.send(answer);
