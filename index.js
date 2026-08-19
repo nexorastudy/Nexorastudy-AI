@@ -331,10 +331,7 @@ app.get("/ask", async (req, res) => {
 
     }
 
-    console.log(
-      "Question received:",
-      question
-    );
+    console.log("Question received");
 
     // ----------------------------------------------
     // CONTEXT
