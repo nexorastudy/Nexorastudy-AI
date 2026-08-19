@@ -13,11 +13,16 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-// --------------------
-// Tavily Search
-// --------------------
+// ==================================================
+// TAVILY WEB SEARCH
+// ==================================================
 async function getWebContext(question) {
   try {
+    if (!process.env.TAVILY_API_KEY) {
+      console.log("Tavily API key not configured");
+      return "";
+    }
+
     const response = await fetch(
       "https://api.tavily.com/search",
       {
@@ -29,61 +34,311 @@ async function getWebContext(question) {
           api_key: process.env.TAVILY_API_KEY,
           query: `${question} latest`,
           topic: "general",
-          search_depth: "advanced",
+          search_depth: "basic",
           max_results: 5
         })
       }
     );
 
-    const data = await response.json();
+    const text = await response.text();
 
-    if (!data.results) return "";
+    if (!response.ok) {
+      console.log(
+        "Tavily HTTP Error:",
+        response.status,
+        text.slice(0, 500)
+      );
+      return "";
+    }
+
+    const data = JSON.parse(text);
+
+    if (!Array.isArray(data.results)) {
+      return "";
+    }
 
     return data.results
-      .map(
-        item =>
-          `${item.title}\n${item.content}`
+      .map(item =>
+        `${item.title || ""}\n${item.content || ""}`
       )
-      .join("\n\n");
+      .join("\n\n")
+      .slice(0, 6000);
 
   } catch (error) {
-    console.log("Tavily Error:", error);
+    console.log("Tavily Error:", error.message);
     return "";
   }
 }
 
-// --------------------
-// Local RAG Context
-// --------------------
+// ==================================================
+// LOCAL RAG
+// ==================================================
 function getRagContext() {
   try {
     return fs.readFileSync(
       "./data/ncert.txt",
       "utf8"
-    ).slice(0, 2000);
+    ).slice(0, 4000);
+
   } catch (error) {
-    console.log("RAG Error:", error);
+    console.log("RAG Error:", error.message);
     return "";
   }
 }
 
-// --------------------
-// Home Route
-// --------------------
+// ==================================================
+// AI SYSTEM PROMPT
+// ==================================================
+function createSystemPrompt(webContext, ragContext) {
+
+  return `
+You are NexoraStudy AI, a helpful student education assistant.
+
+WEB CONTEXT:
+${webContext || "No web context available."}
+
+RAG CONTEXT:
+${ragContext || "No RAG context available."}
+
+IMPORTANT RULES:
+
+1. ALWAYS answer in TWO sections.
+2. First section MUST be in Hindi using Devanagari script.
+3. Second section MUST be in English.
+4. Never skip either section.
+5. Use simple student-friendly language.
+6. For current/latest information, use WEB CONTEXT when available.
+7. For study questions, use RAG CONTEXT when relevant.
+8. If context is unavailable, use your general knowledge.
+9. Keep the answer clear and reasonably short.
+
+OUTPUT FORMAT:
+
+🇮🇳 हिंदी:
+[उत्तर हिन्दी में]
+
+🇬🇧 English:
+[Answer in English]
+`;
+}
+
+// ==================================================
+// GROQ
+// ==================================================
+async function askGroq(question, systemPrompt) {
+
+  if (!process.env.GROQ_API_KEY) {
+    console.log("Groq API key missing");
+    return "";
+  }
+
+  try {
+
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization":
+            `Bearer ${process.env.GROQ_API_KEY}`
+        },
+
+        body: JSON.stringify({
+          model: "openai/gpt-oss-20b",
+
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: question
+            }
+          ],
+
+          temperature: 0.3,
+
+          max_tokens: 1000,
+
+          include_reasoning: false
+        })
+      }
+    );
+
+    const text = await response.text();
+
+    // IMPORTANT:
+    // HTTP error ko Success nahi bolenge
+    if (!response.ok) {
+
+      console.log(
+        "Groq HTTP Error:",
+        response.status,
+        text.slice(0, 800)
+      );
+
+      return "";
+    }
+
+    const data = JSON.parse(text);
+
+    const answer =
+      data?.choices?.[0]?.message?.content || "";
+
+    if (!answer.trim()) {
+      console.log("Groq returned empty answer");
+      return "";
+    }
+
+    console.log("Groq SUCCESS");
+
+    return answer.trim();
+
+  } catch (error) {
+
+    console.log(
+      "Groq ERROR:",
+      error.message
+    );
+
+    return "";
+  }
+}
+
+// ==================================================
+// OPENROUTER FALLBACK
+// ==================================================
+async function askOpenRouter(question, systemPrompt) {
+
+  if (!process.env.OPENROUTER_API_KEY) {
+    console.log("OpenRouter API key missing");
+    return "";
+  }
+
+  try {
+
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          "Authorization":
+            `Bearer ${process.env.OPENROUTER_API_KEY}`,
+
+          "HTTP-Referer":
+            "https://nexorastudy-ai.onrender.com",
+
+          "X-Title":
+            "NexoraStudy AI"
+        },
+
+        body: JSON.stringify({
+
+          // Automatically chooses an available
+          // free model
+          model: "openrouter/free",
+
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: question
+            }
+          ],
+
+          temperature: 0.3,
+
+          max_tokens: 1000
+        })
+      }
+    );
+
+    const text = await response.text();
+
+    if (!response.ok) {
+
+      console.log(
+        "OpenRouter HTTP Error:",
+        response.status,
+        text.slice(0, 800)
+      );
+
+      return "";
+    }
+
+    const data = JSON.parse(text);
+
+    const answer =
+      data?.choices?.[0]?.message?.content || "";
+
+    if (!answer.trim()) {
+      console.log(
+        "OpenRouter returned empty answer"
+      );
+      return "";
+    }
+
+    console.log("OpenRouter SUCCESS");
+
+    return answer.trim();
+
+  } catch (error) {
+
+    console.log(
+      "OpenRouter ERROR:",
+      error.message
+    );
+
+    return "";
+  }
+}
+
+// ==================================================
+// HOME
+// ==================================================
 app.get("/", (req, res) => {
-  res.send("NexoraStudy AI Running 🚀");
+
+  res.send(
+    "NexoraStudy AI Running 🚀"
+  );
+
 });
 
-// --------------------
-// Ask Route
-// --------------------
+// ==================================================
+// ASK
+// ==================================================
 app.get("/ask", async (req, res) => {
+
   try {
-    const question = req.query.question;
+
+    const question =
+      String(req.query.question || "").trim();
 
     if (!question) {
-      return res.send("Please ask a question.");
+
+      return res.status(400).send(
+        "Please ask a question."
+      );
+
     }
+
+    console.log(
+      "Question received:",
+      question
+    );
+
+    // ----------------------------------------------
+    // CONTEXT
+    // ----------------------------------------------
 
     const webContext =
       await getWebContext(question);
@@ -91,178 +346,100 @@ app.get("/ask", async (req, res) => {
     const ragContext =
       getRagContext();
 
-    const systemPrompt = `
+    const systemPrompt =
+      createSystemPrompt(
+        webContext,
+        ragContext
+      );
 
-You are NexoraStudy AI.
-
-WEB CONTEXT:
-${webContext}
-
-RAG CONTEXT:
-${ragContext}
-
-IMPORTANT RULES:
-
-1. ALWAYS answer in TWO sections.
-2. First section MUST be in Hindi (Devanagari script only).
-3. Second section MUST be in English only.
-4. Never skip the Hindi section.
-5. Never answer only in English.
-6. Use simple student-friendly language.
-7. Use WEB CONTEXT for current affairs and latest information.
-8. Use RAG CONTEXT for study-related questions.
-9. If WEB CONTEXT is empty, answer from general knowledge.
-10. Keep answers clear and short.
-
-OUTPUT FORMAT (FOLLOW EXACTLY):
-
-🇮🇳 हिंदी:
-[उत्तर केवल हिन्दी में]
-
-🇬🇧 English:
-[Answer only in English]
-`;
     let answer = "";
 
-    // --------------------
-    // GROQ (Primary)
-    // --------------------
-    try {
-      const groqResponse =
-        await fetch(
-          "https://api.groq.com/openai/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization:
-                `Bearer ${process.env.GROQ_API_KEY}`
-            },
-            body: JSON.stringify({
-              model:
-                "llama-3.1-8b-instant",
-              messages: [
-                {
-                  role: "system",
-                  content: systemPrompt
-                },
-                {
-                  role: "user",
-                  content: question
-                }
-              ],
-              temperature: 0.3,
-              max_tokens: 1000
-            })
-          }
-        );
+    // ----------------------------------------------
+    // FIRST: GROQ
+    // ----------------------------------------------
 
-      const groqData =
-        await groqResponse.json();
+    answer =
+      await askGroq(
+        question,
+        systemPrompt
+      );
+
+    // ----------------------------------------------
+    // SECOND: OPENROUTER
+    // ----------------------------------------------
+
+    if (!answer) {
+
+      console.log(
+        "Trying OpenRouter fallback..."
+      );
 
       answer =
-        groqData?.choices?.[0]
-          ?.message?.content || "";
-
-      console.log(
-        "Groq Success"
-      );
-
-    } catch (error) {
-      console.log(
-        "Groq Failed:",
-        error
-      );
+        await askOpenRouter(
+          question,
+          systemPrompt
+        );
     }
 
-    // --------------------
-    // OpenRouter Fallback
-    // --------------------
+    // ----------------------------------------------
+    // FINAL FALLBACK
+    // ----------------------------------------------
+
     if (!answer) {
-      try {
-        const openrouterResponse =
-          await fetch(
-            "https://openrouter.ai/api/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json",
-                Authorization:
-                  `Bearer ${process.env.OPENROUTER_API_KEY}`
-              },
-              body: JSON.stringify({
-                model:
-                  "google/gemma-3-9b-it:free",
-                messages: [
-                  {
-                    role: "system",
-                    content:
-                      systemPrompt
-                  },
-                  {
-                    role: "user",
-                    content:
-                      question
-                  }
-                ],
-                temperature: 0.3,
-                max_tokens: 1000
-              })
-            }
-          );
 
-        const openrouterData =
-          await openrouterResponse.json();
+      console.log(
+        "ALL AI PROVIDERS FAILED"
+      );
 
-        answer =
-          openrouterData?.choices?.[0]
-            ?.message?.content ||
-          "";
-
-        console.log(
-          "OpenRouter Success"
-        );
-
-      } catch (error) {
-        console.log(
-          "OpenRouter Failed:",
-          error
-        );
-      }
-    }
-
-    if (!answer || answer.trim() === "") {
-  answer = `
+      return res.status(503).send(`
 🇮🇳 हिंदी:
-अभी उत्तर प्राप्त नहीं हो सका। कृपया कुछ सेकंड बाद फिर प्रयास करें।
+अभी AI सेवा उपलब्ध नहीं है। कृपया कुछ सेकंड बाद फिर प्रयास करें।
 
 🇬🇧 English:
-Unable to generate a response right now. Please try again in a few seconds.
-`;
+The AI service is temporarily unavailable. Please try again in a few seconds.
+`);
+
     }
 
-    res.send(answer);
-
-  } catch (error) {
-    console.log(
-      "SERVER ERROR:",
-      error
-    );
+    // ----------------------------------------------
+    // SEND ANSWER TO MIT APP INVENTOR
+    // ----------------------------------------------
 
     res
-      .status(500)
-      .send("Server Error");
+      .status(200)
+      .type("text/plain")
+      .send(answer);
+
+  } catch (error) {
+
+    console.log(
+      "SERVER ERROR:",
+      error.message
+    );
+
+    res.status(500).send(`
+🇮🇳 हिंदी:
+सर्वर में समस्या आ गई है। कृपया बाद में फिर प्रयास करें।
+
+🇬🇧 English:
+A server error occurred. Please try again later.
+`);
+
   }
+
 });
 
+// ==================================================
+// START SERVER
+// ==================================================
 app.listen(
   PORT,
   "0.0.0.0",
   () => {
+
     console.log(
       `NexoraStudy AI running on port ${PORT}`
     );
+
   }
 );
